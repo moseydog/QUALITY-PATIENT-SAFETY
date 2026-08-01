@@ -1,0 +1,114 @@
+const { DatabaseSync } = require('node:sqlite');
+const bcrypt = require('bcryptjs');
+const path = require('path');
+const fs = require('fs');
+const { METRICS } = require('./metrics');
+const SEED_SUGGESTIONS = require('./suggestions-seed');
+
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
+const db = new DatabaseSync(path.join(DATA_DIR, 'qi.db'));
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role IN ('volunteer','admin')),
+    display_name TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS audit_visits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    submitted_at TEXT,
+    audit_date TEXT,
+    submitted_by_email TEXT,
+    location TEXT,
+    room_number TEXT,
+
+    hand_hygiene_in TEXT,
+    hand_hygiene_out TEXT,
+
+    is_fall_risk TEXT,
+    morse_score INTEGER,
+    tips_board_correct TEXT,
+    bed_alarm_on TEXT,
+    bed_alarm_cord_plugged TEXT,
+    call_light_reach TEXT,
+    fall_wristband TEXT,
+    non_slip_socks TEXT,
+    gait_belt_present TEXT,
+    walker_present TEXT,
+    posey_alarm_present TEXT,
+    posey_alarm_charged TEXT,
+    shower_chair_present TEXT,
+    bedside_commode_present TEXT,
+
+    is_hapi_risk TEXT,
+    braden_score INTEGER,
+    purple_wedges TEXT,
+    specialty_bed_yn TEXT,
+    specialty_bed_type TEXT,
+    turned_with_wedges TEXT,
+    turned_in_chair TEXT,
+    heels_offloaded TEXT,
+    primo_boots TEXT,
+    turned_recently TEXT,
+
+    needs_hapi_education TEXT,
+    knows_what_pi_is TEXT,
+    knows_pi_risk_factors TEXT,
+    knows_pi_locations TEXT,
+    knows_pi_prevention TEXT,
+    already_educated_today TEXT,
+    patient_refused_education TEXT,
+
+    created_by INTEGER,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY(created_by) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS suggestions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    metric_key TEXT NOT NULL,
+    text TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS targets (
+    metric_key TEXT PRIMARY KEY,
+    target_value INTEGER NOT NULL
+  );
+`);
+
+// Seed a default admin account the very first time the app runs, so there's
+// always a way in. This password must be changed immediately after first login.
+const adminCount = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'admin'").get().c;
+if (adminCount === 0) {
+  const tempPassword = 'ChangeMe123!';
+  const hash = bcrypt.hashSync(tempPassword, 10);
+  db.prepare("INSERT INTO users (username, password_hash, role, display_name) VALUES (?, ?, 'admin', ?)")
+    .run('admin', hash, 'Admin');
+  // eslint-disable-next-line no-console
+  console.log('First run: created default admin account -> username "admin", password "ChangeMe123!". Log in and change this immediately (Manage Users).');
+}
+
+// Seed default targets and suggestions on first run only (never overwrites
+// values an admin has already edited).
+const targetCount = db.prepare('SELECT COUNT(*) as c FROM targets').get().c;
+if (targetCount === 0) {
+  const insertTarget = db.prepare('INSERT INTO targets (metric_key, target_value) VALUES (?, ?)');
+  METRICS.forEach((m) => insertTarget.run(m.key, m.target));
+}
+
+const suggestionCount = db.prepare('SELECT COUNT(*) as c FROM suggestions').get().c;
+if (suggestionCount === 0) {
+  const insertSuggestion = db.prepare('INSERT INTO suggestions (metric_key, text) VALUES (?, ?)');
+  Object.entries(SEED_SUGGESTIONS).forEach(([key, texts]) => {
+    texts.forEach((t) => insertSuggestion.run(key, t));
+  });
+}
+
+module.exports = db;
