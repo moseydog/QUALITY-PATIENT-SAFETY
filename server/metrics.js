@@ -13,8 +13,8 @@ const METRICS = [
   { key: 'posey_alarm_charged', label: 'Posey alarm charged', category: 'fall', target: 95, exclude: ['not_in_room'] },
   { key: 'gait_belt_present', label: 'Gait belt in room', category: 'fall', target: 85, exclude: [] },
   { key: 'walker_present', label: 'Walker in room', category: 'fall', target: 80, exclude: [] },
-  { key: 'shower_chair_present', label: 'Shower chair in bathroom', category: 'fall', target: 80, exclude: [] },
-  { key: 'bedside_commode_present', label: 'Bedside commode in bathroom', category: 'fall', target: 80, exclude: [] },
+  { key: 'shower_chair_present', label: 'Shower chair in bathroom', category: 'fall', target: 80, exclude: [], reference: true },
+  { key: 'bedside_commode_present', label: 'Bedside commode in bathroom', category: 'fall', target: 80, exclude: [], reference: true },
 
   // --- HAPI prevention ---
   { key: 'purple_wedges', label: 'Two purple wedges present', category: 'hapi', target: 85, exclude: [] },

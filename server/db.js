@@ -106,6 +106,30 @@ db.exec(`
   );
 `);
 
+// Known-bad data corrections that run every boot, on any disk - not just
+// fresh ones. Unlike the seed-restore above, these reach into a disk that
+// already has real data, since each targets one specific known mistake
+// rather than rebuilding anything. Safe to run repeatedly: a no-op once
+// nothing matches.
+const CORRECTIONS = [
+  {
+    label: 'Ascension Seton rows relabeled to Dell Seton (no audits have happened at Ascension yet)',
+    sql: "UPDATE audit_visits SET location = 'Dell Seton Medical Center' WHERE location = 'Ascension Seton Medical Center'",
+  },
+];
+CORRECTIONS.forEach(({ label, sql }) => {
+  try {
+    const info = db.prepare(sql).run();
+    if (info.changes > 0) {
+      // eslint-disable-next-line no-console
+      console.log(`Data correction applied: ${label} (${info.changes} row${info.changes === 1 ? '' : 's'})`);
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error(`Data correction failed: ${label} -`, e.message);
+  }
+});
+
 // Seed a default admin account the very first time the app runs, so there's
 // always a way in. This password must be changed immediately after first login.
 const adminCount = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'admin'").get().c;

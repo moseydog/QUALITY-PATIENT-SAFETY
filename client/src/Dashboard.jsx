@@ -48,7 +48,10 @@ function MetricCard({ metric, selected, onClick }) {
       onClick={onClick}
       className={`text-left p-4 rounded-xl border bg-white hover:shadow-sm transition ${selected ? 'ring-2 ring-offset-1 ring-slate-400' : 'border-slate-200'}`}
     >
-      <div className="text-xs font-medium text-slate-500 mb-1 leading-snug">{label}</div>
+      <div className="text-xs font-medium text-slate-500 mb-1 leading-snug flex items-center gap-1.5">
+        {label}
+        {metric.reference && <span className="text-[9px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full flex-shrink-0">Reference</span>}
+      </div>
       <div className="flex items-end justify-between">
         <span className="text-2xl font-bold text-slate-800">{latestPct !== null ? `${Math.round(latestPct)}%` : '—'}</span>
         {delta !== null && Math.abs(delta) >= 0.5 && (
@@ -218,12 +221,12 @@ export default function Dashboard({ user, onLogout }) {
 
   function belowTarget(list) {
     return list
-      .filter((c) => c.latestPct !== null && c.latestPct < c.target)
+      .filter((c) => !c.reference && c.latestPct !== null && c.latestPct < c.target)
       .sort((a, b) => (b.target - b.latestPct) - (a.target - a.latestPct));
   }
 
   function categoryAvg(list) {
-    const withPct = list.filter((m) => m.latestPct !== null);
+    const withPct = list.filter((m) => !m.reference && m.latestPct !== null);
     if (withPct.length === 0) return null;
     return Math.round((withPct.reduce((s, m) => s + m.latestPct, 0) / withPct.length) * 10) / 10;
   }
@@ -318,13 +321,14 @@ export default function Dashboard({ user, onLogout }) {
             <div className="grid md:grid-cols-3 gap-3">
               {['fall', 'hapi', 'education'].map((cat) => {
                 const list = byCategory[cat];
+                const countable = list.filter((m) => !m.reference);
                 const avg = categoryAvg(list);
                 return (
                   <button key={cat} onClick={() => setActiveTab(cat)}
                     className="text-left p-5 rounded-xl border border-slate-200 bg-white hover:shadow-sm transition">
                     <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${CATEGORY_META[cat].text}`}>{CATEGORY_META[cat].label}</div>
                     <div className="text-3xl font-bold text-slate-800">{avg !== null ? `${avg}%` : '—'}</div>
-                    <div className="text-xs text-slate-400 mt-1">average across {list.length} metrics, latest month</div>
+                    <div className="text-xs text-slate-400 mt-1">average across {countable.length} metrics, latest month</div>
                   </button>
                 );
               })}

@@ -131,8 +131,11 @@ export default function AddVisitModal({ onClose, onSave, error }) {
                 className="w-full border-b border-slate-200 focus:border-slate-400 outline-none px-1 py-2 text-sm mt-2 bg-transparent" />
             </div>
           </div>
-          <Field label="Location" value={form.location} onChange={set('location')}
-            options={[['', 'Select...'], ['Dell Seton Medical Center', 'Dell Seton Medical Center'], ['Ascension Seton Medical Center', 'Ascension Seton Medical Center']]} />
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <label className="text-sm text-slate-700 font-medium">Location</label>
+                <p className="text-sm text-slate-600 mt-1">Dell Seton Medical Center</p>
+                <p className="text-xs text-slate-400 mt-1">The only site currently being audited — ask an admin to re-enable a location choice once a second site starts.</p>
+              </div>
 
           <div className="pt-2">
             <Field label="Is the patient a fall-risk?" value={form.is_fall_risk} onChange={set('is_fall_risk')} options={YES_NO} />

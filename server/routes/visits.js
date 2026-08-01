@@ -40,6 +40,7 @@ router.get('/stats/summary', (req, res) => {
       key: m.key,
       label: m.label,
       category: m.category,
+      reference: !!m.reference,
       target: targets[m.key] ?? m.target,
       latestPct,
       prevPct,
@@ -118,6 +119,11 @@ router.get('/quality-check', requireRole('admin'), (req, res) => {
      WHERE is_hapi_risk = 'no' AND (braden_score IS NOT NULL OR heels_offloaded IS NOT NULL OR primo_boots IS NOT NULL)`
   ).all();
   hapiInconsistent.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Marked not a HAPI risk, but HAPI fields were filled in', detail: '' }));
+
+  const wrongLocation = db.prepare(
+    "SELECT id, audit_date, room_number, location FROM audit_visits WHERE location = 'Ascension Seton Medical Center'"
+  ).all();
+  wrongLocation.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Location is Ascension Seton — no audits have actually happened there yet', detail: '' }));
 
   const duplicates = db.prepare(
     `SELECT audit_date, room_number, COUNT(*) as c FROM audit_visits
