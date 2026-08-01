@@ -79,10 +79,69 @@ router.get('/stats/trend/:key', (req, res) => {
   res.json({ key: metric.key, label: metric.label, target: metric.target, overall, byLocation });
 });
 
+router.get('/stats/monthly-table', (req, res) => {
+  const out = METRICS.map((m) => {
+    const rows = monthlyRows(m);
+    const byMonth = {};
+    rows.forEach((r) => {
+      byMonth[r.month] = r.total > 0 ? Math.round((r.compliant / r.total) * 1000) / 10 : null;
+    });
+    return { key: m.key, label: m.label, category: m.category, byMonth };
+  });
+  const months = Array.from(new Set(out.flatMap((m) => Object.keys(m.byMonth)))).sort();
+  res.json({ months, metrics: out });
+});
+
+// Rule-based data-quality checks - flags rows worth a human's review rather
+// than claiming to independently verify what happened in a patient's room.
+router.get('/quality-check', requireRole('admin'), (req, res) => {
+  const issues = [];
+
+  const badBraden = db.prepare(
+    "SELECT id, audit_date, room_number, braden_score FROM audit_visits WHERE braden_score IS NOT NULL AND (braden_score < 6 OR braden_score > 23)"
+  ).all();
+  badBraden.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Braden score out of range (valid: 6-23)', detail: String(r.braden_score) }));
+
+  const badMorse = db.prepare(
+    "SELECT id, audit_date, room_number, morse_score FROM audit_visits WHERE morse_score IS NOT NULL AND (morse_score < 0 OR morse_score > 125)"
+  ).all();
+  badMorse.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Morse score out of range (valid: 0-125)', detail: String(r.morse_score) }));
+
+  const fallInconsistent = db.prepare(
+    `SELECT id, audit_date, room_number FROM audit_visits
+     WHERE is_fall_risk = 'no' AND (morse_score IS NOT NULL OR fall_wristband IS NOT NULL OR bed_alarm_on IS NOT NULL)`
+  ).all();
+  fallInconsistent.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Marked not a fall risk, but fall equipment fields were filled in', detail: '' }));
+
+  const hapiInconsistent = db.prepare(
+    `SELECT id, audit_date, room_number FROM audit_visits
+     WHERE is_hapi_risk = 'no' AND (braden_score IS NOT NULL OR heels_offloaded IS NOT NULL OR primo_boots IS NOT NULL)`
+  ).all();
+  hapiInconsistent.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Marked not a HAPI risk, but HAPI fields were filled in', detail: '' }));
+
+  const duplicates = db.prepare(
+    `SELECT audit_date, room_number, COUNT(*) as c FROM audit_visits
+     WHERE audit_date IS NOT NULL AND room_number IS NOT NULL AND room_number != ''
+     GROUP BY audit_date, room_number HAVING c > 1`
+  ).all();
+  duplicates.forEach((r) => issues.push({ id: null, date: r.audit_date, room: r.room_number, type: `Possible duplicate — ${r.c} audits logged for this room on this date`, detail: '' }));
+
+  res.json({ count: issues.length, issues });
+});
+
 router.get('/', (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 50, 500);
   const rows = db.prepare('SELECT * FROM audit_visits ORDER BY audit_date DESC, id DESC LIMIT ?').all(limit);
   res.json(rows);
+});
+
+router.get('/check-duplicate', (req, res) => {
+  const { date, room } = req.query;
+  if (!date || !room) return res.json({ count: 0 });
+  const row = db.prepare(
+    'SELECT COUNT(*) as c FROM audit_visits WHERE audit_date = ? AND room_number = ?'
+  ).get(date, room);
+  res.json({ count: row.c });
 });
 
 router.post('/', (req, res) => {

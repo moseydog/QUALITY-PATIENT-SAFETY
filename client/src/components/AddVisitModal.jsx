@@ -56,7 +56,7 @@ function ScriptBlock({ title, children }) {
 
 const initialForm = {
   audit_date: new Date().toISOString().slice(0, 10),
-  location: '', room_number: '',
+  location: 'Dell Seton Medical Center', room_number: '',
   is_fall_risk: '', morse_score: '', tips_board_correct: '', bed_alarm_on: '',
   bed_alarm_cord_plugged: '', call_light_reach: '', fall_wristband: '', non_slip_socks: '',
   gait_belt_present: '', walker_present: '', posey_alarm_present: '', posey_alarm_charged: '',
@@ -70,7 +70,28 @@ const initialForm = {
 
 export default function AddVisitModal({ onClose, onSave, error }) {
   const [form, setForm] = useState(initialForm);
-  const set = (key) => (val) => setForm((f) => ({ ...f, [key]: val }));
+  const [duplicateCount, setDuplicateCount] = useState(0);
+  const [checked, setChecked] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const set = (key) => (val) => { setForm((f) => ({ ...f, [key]: val })); setChecked(false); };
+
+  async function handleSaveClick() {
+    if (!checked) {
+      setChecking(true);
+      try {
+        const res = await fetch(`/api/visits/check-duplicate?date=${encodeURIComponent(form.audit_date)}&room=${encodeURIComponent(form.room_number)}`, { credentials: 'same-origin' });
+        const data = await res.json();
+        setDuplicateCount(data.count || 0);
+      } catch (e) { setDuplicateCount(0); }
+      setChecking(false);
+      setChecked(true);
+      return; // show the warning (if any) and require a second click to actually save
+    }
+    setSubmitting(true);
+    await onSave(form);
+    setSubmitting(false);
+  }
 
   return (
     <div className="fixed inset-0 bg-slate-900 bg-opacity-40 flex items-center justify-center p-4 z-50">
@@ -209,9 +230,18 @@ export default function AddVisitModal({ onClose, onSave, error }) {
             <Info size={12} className="mt-0.5 flex-shrink-0" /> Room number is for equipment tracking only — no patient names, MRNs, or other identifiers belong in this form.
           </p>
         </div>
-        <div className="px-6 py-4 border-t border-slate-100">
-          <button onClick={() => onSave(form)} className="w-full bg-slate-800 text-white rounded-lg py-2 text-sm font-medium">
-            Save visit
+        <div className="px-6 py-4 border-t border-slate-100 space-y-2">
+          {checked && duplicateCount > 0 && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-xs text-orange-700">
+              {duplicateCount} audit{duplicateCount === 1 ? ' is' : 's are'} already logged for room {form.room_number || '(blank)'} on {form.audit_date}. Double-check the room number and date before saving — if this really is a second, separate visit, click Save again to confirm.
+            </div>
+          )}
+          <button
+            onClick={handleSaveClick}
+            disabled={checking || submitting || !form.audit_date || !form.room_number.trim()}
+            className="w-full bg-slate-800 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-50"
+          >
+            {checking ? 'Checking…' : submitting ? 'Saving…' : (checked && duplicateCount > 0) ? 'Save anyway' : 'Save visit'}
           </button>
         </div>
       </div>

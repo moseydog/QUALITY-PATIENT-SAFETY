@@ -5,9 +5,10 @@ import {
 } from 'recharts';
 import {
   Plus, X, Trash2, Info, Users, KeyRound, Settings, TrendingUp, TrendingDown,
-  MessageSquarePlus, AlertTriangle,
+  MessageSquarePlus, AlertTriangle, ShieldCheck,
 } from 'lucide-react';
 import AddVisitModal from './components/AddVisitModal.jsx';
+import MonthlyTable from './components/MonthlyTable.jsx';
 
 const CATEGORY_META = {
   fall: { label: 'Fall Prevention', color: 'amber', active: 'bg-amber-600 text-white', text: 'text-amber-700' },
@@ -110,6 +111,9 @@ export default function Dashboard({ user, onLogout }) {
   const [showUsers, setShowUsers] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showQuality, setShowQuality] = useState(false);
+  const [qualityIssues, setQualityIssues] = useState(null);
+  const [monthlyData, setMonthlyData] = useState(null);
 
   const [userError, setUserError] = useState(null);
   const [newUser, setNewUser] = useState({ username: '', password: '', role: 'volunteer', display_name: '' });
@@ -123,11 +127,17 @@ export default function Dashboard({ user, onLogout }) {
   async function refetchSuggestions() { setSuggestions(await api('/api/suggestions')); }
   async function refetchUsers() { if (isAdmin) setUsers(await api('/api/users')); }
   async function refetchVisits() { setRecentVisits(await api('/api/visits?limit=100')); }
+  async function refetchMonthly() { setMonthlyData(await api('/api/visits/stats/monthly-table')); }
+  async function runQualityCheck() {
+    if (!isAdmin) return;
+    const data = await api('/api/visits/quality-check');
+    setQualityIssues(data.issues);
+  }
 
   useEffect(() => {
     (async () => {
       try {
-        await Promise.all([refetchSummary(), refetchSuggestions(), refetchUsers(), refetchVisits()]);
+        await Promise.all([refetchSummary(), refetchSuggestions(), refetchUsers(), refetchVisits(), refetchMonthly()]);
       } catch (e) { /* handled by empty states */ }
       setLoading(false);
     })();
@@ -157,7 +167,11 @@ export default function Dashboard({ user, onLogout }) {
   }
 
   async function handleDeleteVisit(id) {
-    try { await api(`/api/visits/${id}`, { method: 'DELETE' }); await Promise.all([refetchSummary(), refetchVisits()]); } catch (e) { /* ignore */ }
+    try { await api(`/api/visits/${id}`, { method: 'DELETE' }); await Promise.all([refetchSummary(), refetchVisits(), refetchMonthly()]); } catch (e) { /* ignore */ }
+  }
+
+  async function handleDeleteFlagged(id) {
+    try { await api(`/api/visits/${id}`, { method: 'DELETE' }); await Promise.all([refetchSummary(), refetchVisits(), refetchMonthly(), runQualityCheck()]); } catch (e) { /* ignore */ }
   }
 
   async function handleClearAll() {
@@ -304,6 +318,11 @@ export default function Dashboard({ user, onLogout }) {
               <Plus size={15} /> Add visit
             </button>
             {isAdmin && (
+              <button onClick={() => { setShowQuality(true); runQualityCheck(); }} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-500" title="Data quality check">
+                <ShieldCheck size={16} />
+              </button>
+            )}
+            {isAdmin && (
               <button onClick={() => setShowSuggestionsAdmin(true)} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-500" title="Manage suggestions">
                 <MessageSquarePlus size={16} />
               </button>
@@ -348,6 +367,10 @@ export default function Dashboard({ user, onLogout }) {
                   ))}
                 </div>
               )}
+            </div>
+            <div>
+              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Month-by-month progression (last 6 months, % compliant)</h2>
+              <MonthlyTable data={monthlyData} targets={Object.fromEntries(withStatus.map((m) => [m.key, m.target]))} />
             </div>
           </div>
         )}
@@ -445,6 +468,43 @@ export default function Dashboard({ user, onLogout }) {
 
       {showAddVisit && (
         <AddVisitModal onClose={() => setShowAddVisit(false)} onSave={handleSaveVisit} error={addVisitError} />
+      )}
+
+      {showQuality && isAdmin && (
+        <div className="fixed inset-0 bg-slate-900 bg-opacity-40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-semibold text-slate-800 flex items-center gap-2"><ShieldCheck size={16} /> Data quality check</h3>
+              <button onClick={() => setShowQuality(false)}><X size={18} className="text-slate-400" /></button>
+            </div>
+            <p className="text-xs text-slate-500 mb-3">
+              Rule-based checks against the current data: implausible scores, answers that contradict a stated risk level, and possible duplicate entries. This flags rows worth a human look — it can't independently confirm what actually happened in a room, only that something about the entry looks inconsistent.
+            </p>
+            <div className="overflow-y-auto flex-1 space-y-2">
+              {qualityIssues === null ? (
+                <p className="text-sm text-slate-400">Checking…</p>
+              ) : qualityIssues.length === 0 ? (
+                <p className="text-sm text-slate-400">No issues found by these checks.</p>
+              ) : (
+                qualityIssues.map((issue, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3 border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                    <div>
+                      <div className="font-medium text-slate-700">{issue.type}</div>
+                      <div className="text-xs text-slate-400">
+                        {issue.date || 'no date'} · room {issue.room || '—'}{issue.detail ? ` · value: ${issue.detail}` : ''}
+                      </div>
+                    </div>
+                    {issue.id && (
+                      <button onClick={() => handleDeleteFlagged(issue.id)} className="text-slate-300 hover:text-red-500 flex-shrink-0">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {showSettings && isAdmin && (
