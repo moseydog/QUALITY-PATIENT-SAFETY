@@ -3,7 +3,6 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
 const { METRICS } = require('./metrics');
-const SEED_SUGGESTIONS = require('./suggestions-seed');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -101,13 +100,6 @@ db.exec(`
     FOREIGN KEY(created_by) REFERENCES users(id)
   );
 
-  CREATE TABLE IF NOT EXISTS suggestions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    metric_key TEXT NOT NULL,
-    text TEXT NOT NULL,
-    created_at TEXT DEFAULT (datetime('now'))
-  );
-
   CREATE TABLE IF NOT EXISTS targets (
     metric_key TEXT PRIMARY KEY,
     target_value INTEGER NOT NULL
@@ -132,14 +124,6 @@ const targetCount = db.prepare('SELECT COUNT(*) as c FROM targets').get().c;
 if (targetCount === 0) {
   const insertTarget = db.prepare('INSERT INTO targets (metric_key, target_value) VALUES (?, ?)');
   METRICS.forEach((m) => insertTarget.run(m.key, m.target));
-}
-
-const suggestionCount = db.prepare('SELECT COUNT(*) as c FROM suggestions').get().c;
-if (suggestionCount === 0) {
-  const insertSuggestion = db.prepare('INSERT INTO suggestions (metric_key, text) VALUES (?, ?)');
-  Object.entries(SEED_SUGGESTIONS).forEach(([key, texts]) => {
-    texts.forEach((t) => insertSuggestion.run(key, t));
-  });
 }
 
 module.exports = db;

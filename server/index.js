@@ -11,7 +11,6 @@ app.use(cookieParser());
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/visits', require('./routes/visits'));
-app.use('/api/suggestions', require('./routes/suggestions'));
 app.use('/api/targets', require('./routes/targets'));
 app.use('/api/users', require('./routes/users'));
 

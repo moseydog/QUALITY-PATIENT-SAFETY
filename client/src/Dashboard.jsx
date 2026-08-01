@@ -4,32 +4,32 @@ import {
   ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 import {
-  Plus, X, Trash2, Info, Users, KeyRound, Settings, TrendingUp, TrendingDown,
-  MessageSquarePlus, AlertTriangle, ShieldCheck,
+  Plus, X, Trash2, Users, KeyRound, Settings, TrendingUp, TrendingDown,
+  AlertTriangle, ShieldCheck,
 } from 'lucide-react';
 import AddVisitModal from './components/AddVisitModal.jsx';
 import MonthlyTable from './components/MonthlyTable.jsx';
 
 const CATEGORY_META = {
-  fall: { label: 'Fall Prevention', color: 'amber', active: 'bg-amber-600 text-white', text: 'text-amber-700' },
-  hapi: { label: 'HAPI Prevention', color: 'teal', active: 'bg-teal-600 text-white', text: 'text-teal-700' },
-  education: { label: 'Patient Education', color: 'violet', active: 'bg-violet-600 text-white', text: 'text-violet-700' },
+  fall: { label: 'Fall Prevention', active: 'bg-amber-600 text-white', text: 'text-amber-700' },
+  hapi: { label: 'HAPI Prevention', active: 'bg-teal-600 text-white', text: 'text-teal-700' },
+  education: { label: 'Patient Education', active: 'bg-violet-600 text-white', text: 'text-violet-700' },
 };
 
-const statusBadge = {
-  green: 'bg-emerald-50 border-emerald-200 text-emerald-700',
-  warn: 'bg-orange-50 border-orange-200 text-orange-700',
-  red: 'bg-red-50 border-red-200 text-red-700',
-  gray: 'bg-slate-50 border-slate-200 text-slate-400',
-};
 const statusBar = { green: 'bg-emerald-500', warn: 'bg-orange-500', red: 'bg-red-500', gray: 'bg-slate-300' };
 const LOCATION_COLORS = { 'Dell Seton Medical Center': '#1e293b', 'Ascension Seton Medical Center': '#d97706' };
+const LINE_PALETTE = ['#1e293b', '#d97706', '#0d9488', '#7c3aed', '#be123c', '#0369a1', '#65a30d', '#c026d3', '#0891b2', '#ea580c', '#4d7c0f'];
 
 function getStatus(pct, target) {
   if (pct === null || pct === undefined) return 'gray';
   if (pct >= target) return 'green';
   if (pct >= target - 10) return 'warn';
   return 'red';
+}
+
+function formatMonth(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 }
 
 async function api(path, options) {
@@ -67,27 +67,53 @@ function MetricCard({ metric, selected, onClick }) {
   );
 }
 
-function InsightCard({ metric, suggestions }) {
-  const list = (suggestions || []).slice(0, 3);
+function BelowTargetList({ list }) {
+  if (list.length === 0) return <p className="text-sm text-slate-400">Everything here is meeting target for the latest month.</p>;
   return (
-    <div className="p-4 rounded-xl border border-slate-200 bg-white">
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <h4 className="font-semibold text-slate-800 text-sm">{metric.label}</h4>
-        <span className={`whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded-full border ${statusBadge[metric.status]}`}>
-          {Math.round(metric.latestPct)}% · target {metric.target}%
-        </span>
+    <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+      {list.map((m) => (
+        <div key={m.key} className="flex items-center justify-between px-4 py-2.5 text-sm">
+          <span className="text-slate-700">{m.label}</span>
+          <span className="font-medium text-red-600">{Math.round(m.latestPct)}% <span className="text-slate-400 font-normal">/ target {m.target}%</span></span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CategoryTrendChart({ metrics, monthlyData }) {
+  const chartData = useMemo(() => {
+    if (!monthlyData) return [];
+    const months = monthlyData.months.slice(-6);
+    return months.map((mo) => {
+      const row = { month: formatMonth(mo) };
+      metrics.forEach((m) => {
+        const full = monthlyData.metrics.find((x) => x.key === m.key);
+        if (full && full.byMonth[mo] !== undefined && full.byMonth[mo] !== null) row[m.label] = full.byMonth[mo];
+      });
+      return row;
+    });
+  }, [metrics, monthlyData]);
+
+  if (chartData.length === 0) return null;
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5">
+      <h3 className="font-semibold text-slate-800 mb-3">All metrics — last 6 months</h3>
+      <div className="h-80">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+            <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+            <Tooltip />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            {metrics.map((m, i) => (
+              <Line key={m.key} type="monotone" dataKey={m.label} stroke={LINE_PALETTE[i % LINE_PALETTE.length]} strokeWidth={2} dot={{ r: 2.5 }} connectNulls />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
       </div>
-      {list.length === 0 ? (
-        <p className="text-sm text-slate-400">No suggestions saved for this metric yet.</p>
-      ) : (
-        <ul className="space-y-1.5">
-          {list.map((s) => (
-            <li key={s.id} className="text-sm text-slate-600 flex gap-2">
-              <span className="text-slate-300">—</span><span>{s.text}</span>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }
@@ -95,9 +121,9 @@ function InsightCard({ metric, suggestions }) {
 export default function Dashboard({ user, onLogout }) {
   const isAdmin = user.role === 'admin';
   const [summary, setSummary] = useState([]);
-  const [suggestions, setSuggestions] = useState({});
   const [users, setUsers] = useState([]);
   const [recentVisits, setRecentVisits] = useState([]);
+  const [monthFilter, setMonthFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedMetric, setSelectedMetric] = useState(null);
@@ -107,7 +133,6 @@ export default function Dashboard({ user, onLogout }) {
   const [showAddVisit, setShowAddVisit] = useState(false);
   const [addVisitError, setAddVisitError] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [showSuggestionsAdmin, setShowSuggestionsAdmin] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -120,13 +145,13 @@ export default function Dashboard({ user, onLogout }) {
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [passwordError, setPasswordError] = useState(null);
   const [passwordMessage, setPasswordMessage] = useState(null);
-  const [newSuggestion, setNewSuggestion] = useState({ metric_key: '', text: '' });
-  const [suggestionError, setSuggestionError] = useState(null);
 
   async function refetchSummary() { setSummary(await api('/api/visits/stats/summary')); }
-  async function refetchSuggestions() { setSuggestions(await api('/api/suggestions')); }
   async function refetchUsers() { if (isAdmin) setUsers(await api('/api/users')); }
-  async function refetchVisits() { setRecentVisits(await api('/api/visits?limit=100')); }
+  async function refetchVisits(month) {
+    const q = month ? `?limit=100&month=${encodeURIComponent(month)}` : '?limit=100';
+    setRecentVisits(await api(`/api/visits${q}`));
+  }
   async function refetchMonthly() { setMonthlyData(await api('/api/visits/stats/monthly-table')); }
   async function runQualityCheck() {
     if (!isAdmin) return;
@@ -137,12 +162,17 @@ export default function Dashboard({ user, onLogout }) {
   useEffect(() => {
     (async () => {
       try {
-        await Promise.all([refetchSummary(), refetchSuggestions(), refetchUsers(), refetchVisits(), refetchMonthly()]);
+        await Promise.all([refetchSummary(), refetchUsers(), refetchVisits(), refetchMonthly()]);
       } catch (e) { /* handled by empty states */ }
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!loading) refetchVisits(monthFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthFilter]);
 
   useEffect(() => {
     if (!selectedMetric) { setTrend(null); return; }
@@ -159,7 +189,7 @@ export default function Dashboard({ user, onLogout }) {
       const payload = { ...form };
       Object.keys(payload).forEach((k) => { if (payload[k] === '') payload[k] = null; });
       await api('/api/visits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      await Promise.all([refetchSummary(), refetchVisits()]);
+      await Promise.all([refetchSummary(), refetchVisits(monthFilter), refetchMonthly()]);
       setShowAddVisit(false);
     } catch (e) {
       setAddVisitError(e.message);
@@ -167,15 +197,15 @@ export default function Dashboard({ user, onLogout }) {
   }
 
   async function handleDeleteVisit(id) {
-    try { await api(`/api/visits/${id}`, { method: 'DELETE' }); await Promise.all([refetchSummary(), refetchVisits(), refetchMonthly()]); } catch (e) { /* ignore */ }
+    try { await api(`/api/visits/${id}`, { method: 'DELETE' }); await Promise.all([refetchSummary(), refetchVisits(monthFilter), refetchMonthly()]); } catch (e) { /* ignore */ }
   }
 
   async function handleDeleteFlagged(id) {
-    try { await api(`/api/visits/${id}`, { method: 'DELETE' }); await Promise.all([refetchSummary(), refetchVisits(), refetchMonthly(), runQualityCheck()]); } catch (e) { /* ignore */ }
+    try { await api(`/api/visits/${id}`, { method: 'DELETE' }); await Promise.all([refetchSummary(), refetchVisits(monthFilter), refetchMonthly(), runQualityCheck()]); } catch (e) { /* ignore */ }
   }
 
   async function handleClearAll() {
-    try { await api('/api/visits/all', { method: 'DELETE' }); await Promise.all([refetchSummary(), refetchVisits()]); } catch (e) { /* ignore */ }
+    try { await api('/api/visits/all', { method: 'DELETE' }); await Promise.all([refetchSummary(), refetchVisits(monthFilter), refetchMonthly()]); } catch (e) { /* ignore */ }
     setShowClearConfirm(false);
   }
 
@@ -209,23 +239,6 @@ export default function Dashboard({ user, onLogout }) {
     } catch (e) { setPasswordError(e.message); }
   }
 
-  async function handleAddSuggestion() {
-    setSuggestionError(null);
-    if (!newSuggestion.metric_key || !newSuggestion.text.trim()) {
-      setSuggestionError('Pick a metric and enter suggestion text.');
-      return;
-    }
-    try {
-      await api('/api/suggestions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newSuggestion) });
-      await refetchSuggestions();
-      setNewSuggestion({ metric_key: '', text: '' });
-    } catch (e) { setSuggestionError(e.message); }
-  }
-
-  async function handleDeleteSuggestion(id) {
-    try { await api(`/api/suggestions/${id}`, { method: 'DELETE' }); await refetchSuggestions(); } catch (e) { /* ignore */ }
-  }
-
   async function handleTargetChange(key, value) {
     setSummary((s) => s.map((m) => (m.key === key ? { ...m, target: value } : m)));
     try {
@@ -240,7 +253,7 @@ export default function Dashboard({ user, onLogout }) {
     return g;
   }, [withStatus]);
 
-  function insightsFor(list) {
+  function belowTarget(list) {
     return list
       .filter((c) => c.latestPct !== null && c.latestPct < c.target)
       .sort((a, b) => (b.target - b.latestPct) - (a.target - a.latestPct));
@@ -271,6 +284,8 @@ export default function Dashboard({ user, onLogout }) {
     if (!trend) return [];
     return Array.from(new Set(trend.byLocation.map((r) => r.location)));
   }, [trend]);
+
+  const allMonths = monthlyData ? monthlyData.months : [];
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400 text-sm">Loading dashboard…</div>;
@@ -323,11 +338,6 @@ export default function Dashboard({ user, onLogout }) {
               </button>
             )}
             {isAdmin && (
-              <button onClick={() => setShowSuggestionsAdmin(true)} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-500" title="Manage suggestions">
-                <MessageSquarePlus size={16} />
-              </button>
-            )}
-            {isAdmin && (
               <button onClick={() => setShowUsers(true)} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-500" title="Manage users">
                 <Users size={16} />
               </button>
@@ -357,16 +367,8 @@ export default function Dashboard({ user, onLogout }) {
               })}
             </div>
             <div>
-              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Biggest opportunities</h2>
-              {insightsFor(withStatus).length === 0 ? (
-                <p className="text-sm text-slate-400">Everything tracked is meeting target for the latest month.</p>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-3">
-                  {insightsFor(withStatus).slice(0, 4).map((m) => (
-                    <InsightCard key={m.key} metric={m} suggestions={suggestions[m.key]} />
-                  ))}
-                </div>
-              )}
+              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Needs attention</h2>
+              <BelowTargetList list={belowTarget(withStatus).slice(0, 6)} />
             </div>
             <div>
               <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Month-by-month progression (last 6 months, % compliant)</h2>
@@ -383,9 +385,11 @@ export default function Dashboard({ user, onLogout }) {
               ))}
             </div>
 
+            <CategoryTrendChart metrics={catMetrics} monthlyData={monthlyData} />
+
             {detailMetric && detailMetric.category === activeTab && (
               <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5">
-                <h3 className="font-semibold text-slate-800 mb-3">{detailMetric.label} — monthly trend</h3>
+                <h3 className="font-semibold text-slate-800 mb-3">{detailMetric.label} — monthly trend by unit</h3>
                 {trendLoading ? (
                   <div className="h-72 flex items-center justify-center text-sm text-slate-400">Loading trend…</div>
                 ) : trendChartData.length === 0 ? (
@@ -415,20 +419,22 @@ export default function Dashboard({ user, onLogout }) {
             )}
 
             <div>
-              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Suggested actions</h2>
-              {insightsFor(catMetrics).length === 0 ? (
-                <p className="text-sm text-slate-400">Every metric here is meeting target for the latest month.</p>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-3">
-                  {insightsFor(catMetrics).map((m) => (
-                    <InsightCard key={m.key} metric={m} suggestions={suggestions[m.key]} />
-                  ))}
-                </div>
-              )}
+              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Needs attention</h2>
+              <BelowTargetList list={belowTarget(catMetrics)} />
             </div>
 
             <div>
-              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Recent visits</h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Visits</h2>
+                <select
+                  value={monthFilter}
+                  onChange={(e) => setMonthFilter(e.target.value)}
+                  className="text-xs border border-slate-200 rounded-lg px-2 py-1 text-slate-600"
+                >
+                  <option value="">Most recent 100</option>
+                  {allMonths.slice().reverse().map((mo) => <option key={mo} value={mo}>{formatMonth(mo)}</option>)}
+                </select>
+              </div>
               <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 text-slate-400 text-xs uppercase">
@@ -442,7 +448,7 @@ export default function Dashboard({ user, onLogout }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {recentVisits.slice(0, 30).map((v) => (
+                    {recentVisits.map((v) => (
                       <tr key={v.id} className="border-t border-slate-100">
                         <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{v.audit_date || '—'}</td>
                         <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{v.location || '—'}</td>
@@ -527,54 +533,6 @@ export default function Dashboard({ user, onLogout }) {
             ))}
             <div className="pt-3 border-t border-slate-100">
               <button onClick={() => setShowClearConfirm(true)} className="w-full text-sm text-red-500 font-medium text-left underline">Clear all visit data</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showSuggestionsAdmin && isAdmin && (
-        <div className="fixed inset-0 bg-slate-900 bg-opacity-40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-slate-800">Manage suggestions</h3>
-              <button onClick={() => setShowSuggestionsAdmin(false)}><X size={18} className="text-slate-400" /></button>
-            </div>
-            <div className="overflow-y-auto flex-1 space-y-4">
-              {withStatus.map((m) => (
-                <div key={m.key} className="border-b border-slate-100 pb-3">
-                  <h4 className="text-sm font-semibold text-slate-700 mb-1">{m.label}</h4>
-                  {(suggestions[m.key] || []).map((s) => (
-                    <div key={s.id} className="flex items-center justify-between gap-2 text-sm text-slate-600 py-1">
-                      <span>— {s.text}</span>
-                      <button onClick={() => handleDeleteSuggestion(s.id)} className="text-slate-300 hover:text-red-500 flex-shrink-0">
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  ))}
-                  {(!suggestions[m.key] || suggestions[m.key].length === 0) && (
-                    <p className="text-xs text-slate-400">No suggestions yet.</p>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="pt-3 border-t border-slate-100 space-y-2">
-              <select
-                value={newSuggestion.metric_key}
-                onChange={(e) => setNewSuggestion({ ...newSuggestion, metric_key: e.target.value })}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="">Choose a metric…</option>
-                {withStatus.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
-              </select>
-              <textarea
-                value={newSuggestion.text}
-                onChange={(e) => setNewSuggestion({ ...newSuggestion, text: e.target.value })}
-                placeholder="New suggestion text"
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-                rows={2}
-              />
-              {suggestionError && <p className="text-xs text-red-500">{suggestionError}</p>}
-              <button onClick={handleAddSuggestion} className="w-full bg-slate-800 text-white rounded-lg py-2 text-sm font-medium">Add suggestion</button>
             </div>
           </div>
         </div>

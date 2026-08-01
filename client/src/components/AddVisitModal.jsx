@@ -7,31 +7,40 @@ const YES_NO_UNABLE = [...YES_NO, ['unable_to_assess', 'Unable to assess']];
 const YES_NO_NA_UNABLE = [...YES_NO, ['not_applicable', 'Not applicable'], ['unable_to_assess', 'Unable to assess']];
 
 function Field({ label, value, onChange, options }) {
+  const realOptions = options.filter(([v]) => v !== '');
   return (
-    <div>
-      <label className="text-xs text-slate-500">{label}</label>
-      <select
-        value={value ?? ''}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1"
-      >
-        {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-      </select>
+    <div className="bg-white border border-slate-200 rounded-lg p-3">
+      <label className="text-sm text-slate-700 font-medium">{label}</label>
+      <div className="mt-2 space-y-1.5">
+        {realOptions.map(([v, l]) => (
+          <label key={v} className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+            <input
+              type="radio"
+              name={label}
+              checked={value === v}
+              onChange={() => onChange(v)}
+              className="w-4 h-4 accent-slate-800"
+            />
+            {l}
+          </label>
+        ))}
+      </div>
     </div>
   );
 }
 
 function NumberField({ label, value, onChange, min, max, hint }) {
   return (
-    <div>
-      <label className="text-xs text-slate-500">{label}{hint ? ` (${hint})` : ''}</label>
+    <div className="bg-white border border-slate-200 rounded-lg p-3">
+      <label className="text-sm text-slate-700 font-medium">{label}{hint ? <span className="text-slate-400 font-normal"> ({hint})</span> : ''}</label>
       <input
         type="number"
         min={min}
         max={max}
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1"
+        placeholder="Short answer text"
+        className="w-full border-b border-slate-200 focus:border-slate-400 outline-none px-1 py-2 text-sm mt-2 bg-transparent"
       />
     </div>
   );
@@ -95,7 +104,8 @@ export default function AddVisitModal({ onClose, onSave, error }) {
 
   return (
     <div className="fixed inset-0 bg-slate-900 bg-opacity-40 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="h-2 bg-violet-600 flex-shrink-0" />
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div>
             <h3 className="font-semibold text-slate-800">Add a room-visit audit</h3>
@@ -103,30 +113,28 @@ export default function AddVisitModal({ onClose, onSave, error }) {
           </div>
           <button onClick={onClose}><X size={18} className="text-slate-400" /></button>
         </div>
-        <div className="overflow-y-auto px-6 py-4 space-y-5 flex-1">
+        <div className="overflow-y-auto px-6 py-4 space-y-3 flex-1">
           <InfoBlock>
             Please <strong>introduce yourself</strong> before starting: <em>"Hi, it's nice to meet you. My name is [your name] and I'm a volunteer with the Quality &amp; Patient Safety Team. We're here to search your room for equipment. Would that be okay with you?"</em> Proceed with the audit after your introduction.
           </InfoBlock>
 
-          <div>
-            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Visit basics</h4>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-slate-500">Date of audit</label>
-                <input type="date" value={form.audit_date} onChange={(e) => set('audit_date')(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1" />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500">Room number</label>
-                <input value={form.room_number} onChange={(e) => set('room_number')(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1" />
-              </div>
-              <Field label="Location" value={form.location} onChange={set('location')}
-                options={[['', 'Select...'], ['Dell Seton Medical Center', 'Dell Seton Medical Center'], ['Ascension Seton Medical Center', 'Ascension Seton Medical Center']]} />
+          <div className="bg-white border border-slate-200 rounded-lg p-3 space-y-3">
+            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Visit basics</h4>
+            <div>
+              <label className="text-sm text-slate-700 font-medium">Date of audit</label>
+              <input type="date" value={form.audit_date} onChange={(e) => set('audit_date')(e.target.value)}
+                className="w-full border-b border-slate-200 focus:border-slate-400 outline-none px-1 py-2 text-sm mt-2 bg-transparent" />
+            </div>
+            <div>
+              <label className="text-sm text-slate-700 font-medium">Room number</label>
+              <input value={form.room_number} onChange={(e) => set('room_number')(e.target.value)} placeholder="Short answer text"
+                className="w-full border-b border-slate-200 focus:border-slate-400 outline-none px-1 py-2 text-sm mt-2 bg-transparent" />
             </div>
           </div>
+          <Field label="Location" value={form.location} onChange={set('location')}
+            options={[['', 'Select...'], ['Dell Seton Medical Center', 'Dell Seton Medical Center'], ['Ascension Seton Medical Center', 'Ascension Seton Medical Center']]} />
 
-          <div className="border-t border-slate-100 pt-4">
+          <div className="pt-2">
             <Field label="Is the patient a fall-risk?" value={form.is_fall_risk} onChange={set('is_fall_risk')} options={YES_NO} />
           </div>
 
@@ -151,7 +159,7 @@ export default function AddVisitModal({ onClose, onSave, error }) {
             </div>
           )}
 
-          <div className="border-t border-slate-100 pt-4">
+          <div className="pt-2">
             <Field label="Is the patient at risk of developing a pressure injury?" value={form.is_hapi_risk} onChange={set('is_hapi_risk')} options={YES_NO} />
           </div>
 
@@ -179,7 +187,7 @@ export default function AddVisitModal({ onClose, onSave, error }) {
             </div>
           )}
 
-          <div className="border-t border-slate-100 pt-4 space-y-3">
+          <div className="pt-2 space-y-3">
             <h4 className="text-xs font-semibold text-violet-700 uppercase tracking-wide">Patient education</h4>
             <InfoBlock>
               One of the most important parts of your role is patient education — you don't need to be a doctor or nurse, just a friendly advocate. Some patients may be non-verbal or unable to answer; select "Unable to assess" to continue.

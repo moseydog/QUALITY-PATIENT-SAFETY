@@ -131,6 +131,12 @@ router.get('/quality-check', requireRole('admin'), (req, res) => {
 
 router.get('/', (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 50, 500);
+  if (req.query.month) {
+    const rows = db.prepare(
+      "SELECT * FROM audit_visits WHERE substr(audit_date,1,7) = ? ORDER BY audit_date DESC, id DESC LIMIT ?"
+    ).all(req.query.month, limit);
+    return res.json(rows);
+  }
   const rows = db.prepare('SELECT * FROM audit_visits ORDER BY audit_date DESC, id DESC LIMIT ?').all(limit);
   res.json(rows);
 });
