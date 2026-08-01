@@ -8,17 +8,35 @@ const SEED_SUGGESTIONS = require('./suggestions-seed');
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-// If this is a brand new (empty) disk - e.g. a fresh Render service, or the
-// first deploy after adding a persistent disk - restore from the historical
-// data bundled with the code instead of starting from zero. This never runs
-// again once a real database file exists at this path, so it can't clobber
-// anything added afterward.
+// If this disk has no real data yet - either no file at all, or a file that
+// exists but has zero audit visits (e.g. left over from an earlier deploy,
+// before this restore logic existed) - restore from the historical data
+// bundled with the code. Once the disk has even one real visit, this never
+// touches it again.
 const dbPath = path.join(DATA_DIR, 'qi.db');
 const seedPath = path.join(__dirname, 'seed-data', 'qi-seed.db');
-if (!fs.existsSync(dbPath) && fs.existsSync(seedPath)) {
+
+function isEmptyOrMissing(p) {
+  if (!fs.existsSync(p)) return true;
+  try {
+    const testDb = new DatabaseSync(p);
+    let count = 0;
+    try {
+      count = testDb.prepare('SELECT COUNT(*) as c FROM audit_visits').get().c;
+    } catch (e) {
+      count = 0; // table doesn't exist yet - treat as empty
+    }
+    testDb.close();
+    return count === 0;
+  } catch (e) {
+    return true; // file exists but isn't a valid/openable database - restore
+  }
+}
+
+if (isEmptyOrMissing(dbPath) && fs.existsSync(seedPath)) {
   fs.copyFileSync(seedPath, dbPath);
   // eslint-disable-next-line no-console
-  console.log('First run on this disk: restored historical audit data from the bundled seed file.');
+  console.log('Disk had no real data yet - restored historical audit data from the bundled seed file.');
 }
 
 const db = new DatabaseSync(dbPath);
