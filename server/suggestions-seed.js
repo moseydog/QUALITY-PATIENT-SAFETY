@@ -112,16 +112,6 @@ module.exports = {
     'Coordinate timing with nursing so education isn\'t always happening at the same point in the day',
     'Treat a "no" as a prompt to educate now, not just a data point',
   ],
-  hand_hygiene_in: [
-    'Position hand sanitizer directly at the doorway so it\'s the path of least resistance',
-    'Include hand hygiene in volunteer onboarding and refreshers',
-    'Spot-check and coach in real time given how close to ceiling this already is',
-  ],
-  hand_hygiene_out: [
-    'Position hand sanitizer directly at the doorway so it\'s the path of least resistance',
-    'Include hand hygiene in volunteer onboarding and refreshers',
-    'Spot-check and coach in real time given how close to ceiling this already is',
-  ],
   default: [
     'Run a quick root-cause discussion with frontline staff to find the real barrier',
     'Test one small change with a PDSA cycle on a single unit before spreading it',

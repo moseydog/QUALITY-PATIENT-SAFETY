@@ -8,7 +8,20 @@ const SEED_SUGGESTIONS = require('./suggestions-seed');
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-const db = new DatabaseSync(path.join(DATA_DIR, 'qi.db'));
+// If this is a brand new (empty) disk - e.g. a fresh Render service, or the
+// first deploy after adding a persistent disk - restore from the historical
+// data bundled with the code instead of starting from zero. This never runs
+// again once a real database file exists at this path, so it can't clobber
+// anything added afterward.
+const dbPath = path.join(DATA_DIR, 'qi.db');
+const seedPath = path.join(__dirname, 'seed-data', 'qi-seed.db');
+if (!fs.existsSync(dbPath) && fs.existsSync(seedPath)) {
+  fs.copyFileSync(seedPath, dbPath);
+  // eslint-disable-next-line no-console
+  console.log('First run on this disk: restored historical audit data from the bundled seed file.');
+}
+
+const db = new DatabaseSync(dbPath);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (

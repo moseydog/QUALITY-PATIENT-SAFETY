@@ -221,7 +221,7 @@ export default function Dashboard({ user, onLogout }) {
 
   const withStatus = useMemo(() => summary.map((m) => ({ ...m, status: getStatus(m.latestPct, m.target) })), [summary]);
   const byCategory = useMemo(() => {
-    const g = { fall: [], hapi: [], education: [], process: [] };
+    const g = { fall: [], hapi: [], education: [] };
     withStatus.forEach((m) => { if (g[m.category]) g[m.category].push(m); });
     return g;
   }, [withStatus]);
@@ -270,10 +270,8 @@ export default function Dashboard({ user, onLogout }) {
       <div className="max-w-6xl mx-auto p-5 md:p-8 space-y-6">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Falls & HAPI Audit — QI Dashboard</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Hand hygiene (volunteer, infection prevention): <span className="font-medium text-slate-700">{byCategory.process[0]?.latestPct ?? '—'}% in</span> · <span className="font-medium text-slate-700">{byCategory.process[1]?.latestPct ?? '—'}% out</span>
-            </p>
+            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Quality and Patient Safety Volunteer Program</h1>
+            <p className="text-sm text-slate-500 mt-1">Falls &amp; HAPI prevention compliance dashboard</p>
           </div>
           <div className="text-right flex-shrink-0">
             <div className="text-sm font-medium text-slate-700">{user.display_name || user.username}</div>
@@ -341,11 +339,11 @@ export default function Dashboard({ user, onLogout }) {
             </div>
             <div>
               <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Biggest opportunities</h2>
-              {insightsFor(withStatus.filter((m) => m.category !== 'process')).length === 0 ? (
+              {insightsFor(withStatus).length === 0 ? (
                 <p className="text-sm text-slate-400">Everything tracked is meeting target for the latest month.</p>
               ) : (
                 <div className="grid md:grid-cols-2 gap-3">
-                  {insightsFor(withStatus.filter((m) => m.category !== 'process')).slice(0, 4).map((m) => (
+                  {insightsFor(withStatus).slice(0, 4).map((m) => (
                     <InsightCard key={m.key} metric={m} suggestions={suggestions[m.key]} />
                   ))}
                 </div>

@@ -30,10 +30,6 @@ const METRICS = [
   { key: 'knows_pi_locations', label: 'Knows where pressure injuries occur', category: 'education', target: 75, exclude: ['unable_to_assess'] },
   { key: 'knows_pi_prevention', label: 'Knows prevention strategies', category: 'education', target: 75, exclude: ['unable_to_assess'] },
   { key: 'already_educated_today', label: 'Already educated today (self-report)', category: 'education', target: 70, exclude: ['unable_to_assess'] },
-
-  // --- Volunteer process (infection prevention, not patient-directed) ---
-  { key: 'hand_hygiene_in', label: 'Hand hygiene before entering', category: 'process', target: 100, exclude: [] },
-  { key: 'hand_hygiene_out', label: 'Hand hygiene after exiting', category: 'process', target: 100, exclude: [] },
 ];
 
 const METRIC_KEYS = new Set(METRICS.map((m) => m.key));

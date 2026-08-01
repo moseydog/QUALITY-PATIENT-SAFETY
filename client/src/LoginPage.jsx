@@ -54,7 +54,7 @@ export default function LoginPage({ onLogin }) {
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
           <div>
             <h1 className="text-lg font-bold text-slate-800">{portal === 'admin' ? 'Admin login' : 'Volunteer login'}</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Fall &amp; HAPI Prevention QI Dashboard</p>
+            <p className="text-sm text-slate-500 mt-0.5">Quality and Patient Safety Volunteer Program</p>
           </div>
           <div>
             <label className="text-xs text-slate-500">Username</label>
