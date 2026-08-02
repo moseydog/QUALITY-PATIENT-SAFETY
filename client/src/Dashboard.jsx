@@ -318,16 +318,19 @@ export default function Dashboard({ user, onLogout }) {
         <div className="max-w-6xl mx-auto px-5 md:px-8 pt-6 pb-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-editorial mb-1.5">Quality &amp; Patient Safety — Ongoing Compliance Report</p>
-              <h1 className="font-serif text-3xl font-semibold text-ink tracking-tight leading-tight">Quality and Patient Safety Volunteer Program</h1>
-              <p className="text-sm text-text-muted mt-1.5 font-serif italic">Falls &amp; hospital-acquired pressure injury prevention, Dell Seton Medical Center</p>
+              <div className="flex items-center mb-2.5">
+                <span className="bg-ink text-paper text-xs font-semibold px-2.5 py-1">QPS</span>
+                <span className="bg-surface text-ink text-xs font-medium px-2.5 py-1">Volunteer Program</span>
+              </div>
+              <h1 className="text-3xl font-bold text-ink tracking-tight leading-tight">Quality and Patient Safety Volunteer Program</h1>
+              <p className="text-sm text-text-muted mt-1.5">Falls &amp; hospital-acquired pressure injury prevention, Dell Seton Medical Center</p>
             </div>
             <div className="text-right flex-shrink-0 text-sm">
               <div className="font-medium text-ink">{user.display_name || user.username}</div>
               <div className="text-xs text-text-dim mb-1.5 capitalize">{user.role}</div>
               <div className="flex gap-3 justify-end text-xs">
-                <button onClick={() => setShowPassword(true)} className="text-editorial underline underline-offset-2">Change password</button>
-                <button onClick={onLogout} className="text-editorial underline underline-offset-2">Log out</button>
+                <button onClick={() => setShowPassword(true)} className="text-ink underline underline-offset-2">Change password</button>
+                <button onClick={onLogout} className="text-ink underline underline-offset-2">Log out</button>
               </div>
             </div>
           </div>
@@ -385,14 +388,18 @@ export default function Dashboard({ user, onLogout }) {
                   <button key={cat} onClick={() => setActiveTab(cat)}
                     className="text-left p-5 bg-surface border border-rule hover:border-text-dim transition">
                     <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${CATEGORY_META[cat].text}`}>{CATEGORY_META[cat].label}</div>
-                    <div className="font-serif text-4xl font-semibold text-ink">{avg !== null ? `${avg}%` : '—'}</div>
+                    <div className="text-4xl font-bold text-ink">{avg !== null ? `${avg}%` : '—'}</div>
                     <div className="text-xs text-text-dim mt-1">weighted average, {countable.length} metrics, latest month</div>
                   </button>
                 );
               })}
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-ink font-serif mb-1">Since program start</h2>
+              <div className="flex items-center mb-2">
+                <span className="bg-ink text-paper text-[10px] font-semibold px-2 py-0.5">QPS</span>
+                <span className="bg-surface text-ink text-[10px] font-medium px-2 py-0.5">Since Program Start</span>
+              </div>
+              <h2 className="text-sm font-semibold text-ink mb-1">Since program start</h2>
               <p className="text-xs text-text-dim mb-3">Weighted compliance rate by month, every audit on record — {allMonths[0] ? formatMonth(allMonths[0]) : ''} through {allMonths[allMonths.length - 1] ? formatMonth(allMonths[allMonths.length - 1]) : ''}.</p>
               <div className="grid md:grid-cols-3 gap-3">
                 {['fall', 'hapi', 'education'].map((cat) => (
@@ -406,11 +413,11 @@ export default function Dashboard({ user, onLogout }) {
               </div>
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-ink font-serif mb-2">Needs attention</h2>
+              <h2 className="text-sm font-semibold text-ink mb-2">Needs attention</h2>
               <BelowTargetList list={belowTarget(withStatus).slice(0, 6)} />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-ink font-serif mb-2">Table 1. Month-by-month progression, last 6 months (% compliant)</h2>
+              <h2 className="text-sm font-semibold text-ink mb-2">Month-by-month progression, last 6 months (% compliant)</h2>
               <MonthlyTable data={monthlyData} targets={Object.fromEntries(withStatus.map((m) => [m.key, m.target]))} />
             </div>
           </div>
@@ -418,6 +425,10 @@ export default function Dashboard({ user, onLogout }) {
 
         {catMetrics && (
           <div className="space-y-6">
+            <div className="flex items-center">
+              <span className="bg-ink text-paper text-[10px] font-semibold px-2 py-0.5">QPS</span>
+              <span className="bg-surface text-ink text-[10px] font-medium px-2 py-0.5">{CATEGORY_META[activeTab].label}</span>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {catMetrics.map((m) => (
                 <MetricCard key={m.key} metric={m} selected={selectedMetric === m.key} onClick={() => setSelectedMetric(m.key)} />
@@ -426,7 +437,7 @@ export default function Dashboard({ user, onLogout }) {
 
             <div>
               <div className="mb-2">
-                <h2 className="text-sm font-semibold text-ink font-serif">Figure 1. Compliance by metric, last 6 months</h2>
+                <h2 className="text-sm font-semibold text-ink">Compliance by metric, last 6 months</h2>
                 <p className="text-xs text-text-dim">Shaded region indicates performance below the target threshold for each metric.</p>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -437,27 +448,27 @@ export default function Dashboard({ user, onLogout }) {
             </div>
 
             {detailMetric && detailMetric.category === activeTab && (
-              <div className="bg-surface border border-rule p-4 md:p-5">
+              <div className="bg-panel p-4 md:p-5">
                 <div className="flex items-baseline justify-between mb-3">
-                  <h3 className="text-sm font-medium text-ink font-serif">Figure 2. {detailMetric.label} — full history by unit</h3>
-                  <span className="text-xs text-text-dim">target {detailMetric.target}%</span>
+                  <h3 className="text-sm font-medium text-panel-text">{detailMetric.label} — full history by unit</h3>
+                  <span className="text-xs text-panel-muted">target {detailMetric.target}%</span>
                 </div>
                 {trendLoading ? (
-                  <div className="h-64 flex items-center justify-center text-sm text-text-dim">Loading…</div>
+                  <div className="h-64 flex items-center justify-center text-sm text-panel-muted">Loading…</div>
                 ) : trendChartData.length === 0 ? (
-                  <p className="text-sm text-text-dim">No dated audits for this metric yet.</p>
+                  <p className="text-sm text-panel-muted">No dated audits for this metric yet.</p>
                 ) : (
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={trendChartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#8a8a86' }} axisLine={{ stroke: '#2a2a2a' }} tickLine={false} />
-                        <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#8a8a86' }} axisLine={false} tickLine={false} ticks={[0, 25, 50, 75, 100]} />
-                        <Tooltip contentStyle={{ fontSize: 12, border: '1px solid #2a2a2a', borderRadius: 2, background: '#1c1c1c', color: '#f2f2f0' }} />
-                        <Legend wrapperStyle={{ fontSize: 11 }} iconType="plainline" />
-                        <ReferenceLine y={detailMetric.target} stroke="#4a4a46" strokeDasharray="3 3" strokeWidth={1} />
-                        <Line type="monotone" dataKey="Overall" stroke="#f2f2f0" strokeWidth={2} dot={{ r: 2.5 }} connectNulls isAnimationActive={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#8f8f89' }} axisLine={{ stroke: '#333330' }} tickLine={false} />
+                        <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#8f8f89' }} axisLine={false} tickLine={false} ticks={[0, 25, 50, 75, 100]} />
+                        <Tooltip contentStyle={{ fontSize: 12, border: '1px solid #333330', borderRadius: 2, background: '#1c1c1a', color: '#f4f4f0' }} />
+                        <Legend wrapperStyle={{ fontSize: 11, color: '#c9c9c3' }} iconType="plainline" />
+                        <ReferenceLine y={detailMetric.target} stroke="#55554f" strokeDasharray="3 3" strokeWidth={1} />
+                        <Line type="monotone" dataKey="Overall" stroke="#f4f4f0" strokeWidth={2} dot={{ r: 2.5 }} connectNulls isAnimationActive={false} />
                         {locationsInTrend.map((loc) => (
-                          <Line key={loc} type="monotone" dataKey={loc} stroke={LOCATION_COLORS[loc] || '#8a8a86'} strokeWidth={1.25} strokeDasharray="4 3" dot={{ r: 1.5 }} connectNulls isAnimationActive={false} />
+                          <Line key={loc} type="monotone" dataKey={loc} stroke={LOCATION_COLORS[loc] || '#8f8f89'} strokeWidth={1.25} strokeDasharray="4 3" dot={{ r: 1.5 }} connectNulls isAnimationActive={false} />
                         ))}
                       </LineChart>
                     </ResponsiveContainer>
@@ -470,13 +481,13 @@ export default function Dashboard({ user, onLogout }) {
             )}
 
             <div>
-              <h2 className="text-sm font-semibold text-ink font-serif mb-2">Needs attention</h2>
+              <h2 className="text-sm font-semibold text-ink mb-2">Needs attention</h2>
               <BelowTargetList list={belowTarget(catMetrics)} />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-sm font-semibold text-ink font-serif">Table 1. Individual audit visits</h2>
+                <h2 className="text-sm font-semibold text-ink">Individual audit visits</h2>
                 <select
                   value={monthFilter}
                   onChange={(e) => setMonthFilter(e.target.value)}
