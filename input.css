@@ -4,21 +4,41 @@
 @theme {
   --font-sans: 'Source Sans 3', system-ui, sans-serif;
   --font-serif: 'Source Serif 4', Georgia, serif;
-  --color-ink: #1a1a1a;
-  --color-paper: #fafaf8;
-  --color-rule: #d8d5ce;
-  --color-editorial: #0f4c4c;
-  --color-editorial-light: #e8f0ef;
-  --color-falls-accent: #8c6318;
-  --color-falls-light: #f5eee0;
-  --color-hapi-accent: #0f4c4c;
-  --color-hapi-light: #e8f0ef;
-  --color-edu-accent: #6b2d3c;
-  --color-edu-light: #f2e8ea;
-  --color-status-good: #2f6b4f;
-  --color-status-good-light: #eaf2ee;
-  --color-status-warn: #a6631e;
-  --color-status-warn-light: #f7eee1;
-  --color-status-bad: #9e3b3b;
-  --color-status-bad-light: #f7e9e9;
+  --color-ink: #f2f2f0;
+  --color-paper: #0a0a0a;
+  --color-rule: #2a2a2a;
+  --color-surface: #141414;
+  --color-surface-2: #1c1c1c;
+  --color-text-primary: #f2f2f0;
+  --color-text-muted: #8a8a86;
+  --color-text-dim: #5a5a56;
+  --color-editorial: #f2f2f0;
+  --color-editorial-light: #1c1c1c;
+  --color-falls-accent: #f2f2f0;
+  --color-falls-light: #1c1c1c;
+  --color-hapi-accent: #f2f2f0;
+  --color-hapi-light: #1c1c1c;
+  --color-edu-accent: #f2f2f0;
+  --color-edu-light: #1c1c1c;
+  --color-status-good: #7a9b85;
+  --color-status-good-light: #17201a;
+  --color-status-warn: #b8935a;
+  --color-status-warn-light: #201a12;
+  --color-status-bad: #b3574f;
+  --color-status-bad-light: #201414;
+}
+
+body {
+  background: #0a0a0a;
+}
+
+input, select, textarea {
+  background-color: #1c1c1c;
+  color: #f2f2f0;
+}
+input::placeholder, textarea::placeholder {
+  color: #5a5a56;
+}
+input[type="radio"] {
+  background-color: transparent;
 }

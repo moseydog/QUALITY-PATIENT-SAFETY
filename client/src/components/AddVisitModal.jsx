@@ -9,17 +9,17 @@ const YES_NO_NA_UNABLE = [...YES_NO, ['not_applicable', 'Not applicable'], ['una
 function Field({ label, value, onChange, options }) {
   const realOptions = options.filter(([v]) => v !== '');
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-3">
-      <label className="text-sm text-slate-700 font-medium">{label}</label>
+    <div className="bg-surface border border-rule rounded-lg p-3">
+      <label className="text-sm text-ink font-medium">{label}</label>
       <div className="mt-2 space-y-1.5">
         {realOptions.map(([v, l]) => (
-          <label key={v} className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+          <label key={v} className="flex items-center gap-2 text-sm text-text-muted cursor-pointer">
             <input
               type="radio"
               name={label}
               checked={value === v}
               onChange={() => onChange(v)}
-              className="w-4 h-4 accent-slate-800"
+              className="w-4 h-4 accent-ink"
             />
             {l}
           </label>
@@ -31,8 +31,8 @@ function Field({ label, value, onChange, options }) {
 
 function NumberField({ label, value, onChange, min, max, hint }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-3">
-      <label className="text-sm text-slate-700 font-medium">{label}{hint ? <span className="text-slate-400 font-normal"> ({hint})</span> : ''}</label>
+    <div className="bg-surface border border-rule rounded-lg p-3">
+      <label className="text-sm text-ink font-medium">{label}{hint ? <span className="text-text-dim font-normal"> ({hint})</span> : ''}</label>
       <input
         type="number"
         min={min}
@@ -40,7 +40,7 @@ function NumberField({ label, value, onChange, min, max, hint }) {
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Short answer text"
-        className="w-full border-b border-slate-200 focus:border-slate-400 outline-none px-1 py-2 text-sm mt-2 bg-transparent"
+        className="w-full border-b border-rule focus:border-text-muted outline-none px-1 py-2 text-sm mt-2 bg-transparent"
       />
     </div>
   );
@@ -48,7 +48,7 @@ function NumberField({ label, value, onChange, min, max, hint }) {
 
 function InfoBlock({ children }) {
   return (
-    <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-600 leading-relaxed">
+    <div className="bg-surface-2 border border-rule rounded-lg px-3 py-2 text-xs text-text-muted leading-relaxed">
       {children}
     </div>
   );
@@ -56,8 +56,8 @@ function InfoBlock({ children }) {
 
 function ScriptBlock({ title, children }) {
   return (
-    <details className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-600">
-      <summary className="cursor-pointer font-medium text-slate-700">{title}</summary>
+    <details className="bg-surface-2 border border-rule rounded-lg px-3 py-2 text-xs text-text-muted">
+      <summary className="cursor-pointer font-medium text-ink">{title}</summary>
       <div className="mt-2 leading-relaxed space-y-2">{children}</div>
     </details>
   );
@@ -103,38 +103,38 @@ export default function AddVisitModal({ onClose, onSave, error }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-900 bg-opacity-40 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
+      <div className="bg-surface rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="h-2 bg-hapi-accent flex-shrink-0" />
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-rule">
           <div>
-            <h3 className="font-semibold text-slate-800">Add a room-visit audit</h3>
-            <p className="text-xs text-slate-400">Falls: bed alarms & fall prevention equipment. HAPI: positioning, heel offloading, repositioning & pressure-redistribution devices.</p>
+            <h3 className="font-semibold text-ink">Add a room-visit audit</h3>
+            <p className="text-xs text-text-dim">Falls: bed alarms & fall prevention equipment. HAPI: positioning, heel offloading, repositioning & pressure-redistribution devices.</p>
           </div>
-          <button onClick={onClose}><X size={18} className="text-slate-400" /></button>
+          <button onClick={onClose}><X size={18} className="text-text-dim" /></button>
         </div>
         <div className="overflow-y-auto px-6 py-4 space-y-3 flex-1">
           <InfoBlock>
             Please <strong>introduce yourself</strong> before starting: <em>"Hi, it's nice to meet you. My name is [your name] and I'm a volunteer with the Quality &amp; Patient Safety Team. We're here to search your room for equipment. Would that be okay with you?"</em> Proceed with the audit after your introduction.
           </InfoBlock>
 
-          <div className="bg-white border border-slate-200 rounded-lg p-3 space-y-3">
-            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Visit basics</h4>
+          <div className="bg-surface border border-rule rounded-lg p-3 space-y-3">
+            <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wide">Visit basics</h4>
             <div>
-              <label className="text-sm text-slate-700 font-medium">Date of audit</label>
+              <label className="text-sm text-ink font-medium">Date of audit</label>
               <input type="date" value={form.audit_date} onChange={(e) => set('audit_date')(e.target.value)}
-                className="w-full border-b border-slate-200 focus:border-slate-400 outline-none px-1 py-2 text-sm mt-2 bg-transparent" />
+                className="w-full border-b border-rule focus:border-text-muted outline-none px-1 py-2 text-sm mt-2 bg-transparent" />
             </div>
             <div>
-              <label className="text-sm text-slate-700 font-medium">Room number</label>
+              <label className="text-sm text-ink font-medium">Room number</label>
               <input value={form.room_number} onChange={(e) => set('room_number')(e.target.value)} placeholder="Short answer text"
-                className="w-full border-b border-slate-200 focus:border-slate-400 outline-none px-1 py-2 text-sm mt-2 bg-transparent" />
+                className="w-full border-b border-rule focus:border-text-muted outline-none px-1 py-2 text-sm mt-2 bg-transparent" />
             </div>
           </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                <label className="text-sm text-slate-700 font-medium">Location</label>
-                <p className="text-sm text-slate-600 mt-1">Dell Seton Medical Center</p>
-                <p className="text-xs text-slate-400 mt-1">The only site currently being audited — ask an admin to re-enable a location choice once a second site starts.</p>
+              <div className="bg-surface-2 border border-rule rounded-lg p-3">
+                <label className="text-sm text-ink font-medium">Location</label>
+                <p className="text-sm text-text-muted mt-1">Dell Seton Medical Center</p>
+                <p className="text-xs text-text-dim mt-1">The only site currently being audited — ask an admin to re-enable a location choice once a second site starts.</p>
               </div>
 
           <div className="pt-2">
@@ -142,8 +142,8 @@ export default function AddVisitModal({ onClose, onSave, error }) {
           </div>
 
           {form.is_fall_risk === 'yes' && (
-            <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 space-y-3">
-              <h4 className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Fall audit</h4>
+            <div className="bg-surface-2 border border-rule rounded-lg p-4 space-y-3">
+              <h4 className="text-xs font-semibold text-ink uppercase tracking-wide">Fall audit</h4>
               <NumberField label="Morse Fall Risk Score" value={form.morse_score} onChange={set('morse_score')} min={0} max={125} hint="0-125" />
               <InfoBlock>The TIPS Board contains mobility status and other information to determine fall risk. If the patient needs assistance from 2+ people out of bed, they have limited mobility (higher risk of falling).</InfoBlock>
               <Field label="Is the TIPS Board filled out with the correct name and date?" value={form.tips_board_correct} onChange={set('tips_board_correct')} options={YES_NO} />
@@ -167,8 +167,8 @@ export default function AddVisitModal({ onClose, onSave, error }) {
           </div>
 
           {form.is_hapi_risk === 'yes' && (
-            <div className="bg-teal-50 border border-teal-100 rounded-lg p-4 space-y-3">
-              <h4 className="text-xs font-semibold text-teal-700 uppercase tracking-wide">HAPI audit</h4>
+            <div className="bg-surface-2 border border-rule rounded-lg p-4 space-y-3">
+              <h4 className="text-xs font-semibold text-ink uppercase tracking-wide">HAPI audit</h4>
               <NumberField label="Braden Score" value={form.braden_score} onChange={set('braden_score')} min={6} max={23} hint="6-23" />
               <Field label="Are there Purple Wedges in the room?" value={form.purple_wedges} onChange={set('purple_wedges')}
                 options={[['', 'Select...'], ['yes', 'Yes (two)'], ['no', 'No (less than two or none)'], ['other', 'Other (more than two)']]} />
@@ -186,12 +186,12 @@ export default function AddVisitModal({ onClose, onSave, error }) {
               <InfoBlock>PRIMO boots: durable outer fabric prevents skin shearing, two-strap system simplifies placement, heel is totally offloaded.</InfoBlock>
               <Field label="Does the patient have PRIMO boots on?" value={form.primo_boots} onChange={set('primo_boots')} options={YES_NO_NA} />
               <Field label="Has the patient been turned recently (past 2 hours)?" value={form.turned_recently} onChange={set('turned_recently')} options={YES_NO_NA} />
-              <p className="text-xs text-slate-400 italic">*Please ask the patient or nurse/PCT directly*</p>
+              <p className="text-xs text-text-dim italic">*Please ask the patient or nurse/PCT directly*</p>
             </div>
           )}
 
           <div className="pt-2 space-y-3">
-            <h4 className="text-xs font-semibold text-violet-700 uppercase tracking-wide">Patient education</h4>
+            <h4 className="text-xs font-semibold text-ink uppercase tracking-wide">Patient education</h4>
             <InfoBlock>
               One of the most important parts of your role is patient education — you don't need to be a doctor or nurse, just a friendly advocate. Some patients may be non-verbal or unable to answer; select "Unable to assess" to continue.
             </InfoBlock>
@@ -236,21 +236,21 @@ export default function AddVisitModal({ onClose, onSave, error }) {
             Before leaving, ask if the patient would like to be repositioned — if yes, press the call button and ask for the nurse or PCT. Remind them they can always press the call button for help getting out of bed or repositioning.
           </InfoBlock>
 
-          {error && <p className="text-xs text-red-500">{error}</p>}
-          <p className="text-xs text-slate-400 flex items-start gap-1.5">
+          {error && <p className="text-xs text-status-bad">{error}</p>}
+          <p className="text-xs text-text-dim flex items-start gap-1.5">
             <Info size={12} className="mt-0.5 flex-shrink-0" /> Room number is for equipment tracking only — no patient names, MRNs, or other identifiers belong in this form.
           </p>
         </div>
-        <div className="px-6 py-4 border-t border-slate-100 space-y-2">
+        <div className="px-6 py-4 border-t border-rule space-y-2">
           {checked && duplicateCount > 0 && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-xs text-orange-700">
+            <div className="bg-status-warn-light border border-rule rounded px-3 py-2 text-xs text-status-warn">
               {duplicateCount} audit{duplicateCount === 1 ? ' is' : 's are'} already logged for room {form.room_number || '(blank)'} on {form.audit_date}. Double-check the room number and date before saving — if this really is a second, separate visit, click Save again to confirm.
             </div>
           )}
           <button
             onClick={handleSaveClick}
             disabled={checking || submitting || !form.audit_date || !form.room_number.trim()}
-            className="w-full bg-ink text-white rounded py-2 text-sm font-medium disabled:opacity-50"
+            className="w-full bg-ink text-paper rounded py-2 text-sm font-medium disabled:opacity-50"
           >
             {checking ? 'Checking…' : submitting ? 'Saving…' : (checked && duplicateCount > 0) ? 'Save anyway' : 'Save visit'}
           </button>

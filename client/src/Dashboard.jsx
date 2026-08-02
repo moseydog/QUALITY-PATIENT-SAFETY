@@ -10,6 +10,7 @@ import {
 import AddVisitModal from './components/AddVisitModal.jsx';
 import MonthlyTable from './components/MonthlyTable.jsx';
 import MiniTrendChart from './components/MiniTrendChart.jsx';
+import PalantirBarChart from './components/PalantirBarChart.jsx';
 
 const CATEGORY_META = {
   fall: { label: 'Fall Prevention', active: 'bg-falls-accent text-white', text: 'text-falls-accent', light: 'bg-falls-light' },
@@ -17,8 +18,8 @@ const CATEGORY_META = {
   education: { label: 'Patient Education', active: 'bg-edu-accent text-white', text: 'text-edu-accent', light: 'bg-edu-light' },
 };
 
-const statusBar = { green: 'bg-status-good', warn: 'bg-status-warn', red: 'bg-status-bad', gray: 'bg-slate-300' };
-const LOCATION_COLORS = { 'Dell Seton Medical Center': '#1a1a1a', 'Ascension Seton Medical Center': '#8c6318' };
+const statusBar = { green: 'bg-status-good', warn: 'bg-status-warn', red: 'bg-status-bad', gray: 'bg-rule' };
+const LOCATION_COLORS = { 'Dell Seton Medical Center': '#f2f2f0', 'Ascension Seton Medical Center': '#8a8a86' };
 
 function getStatus(pct, target) {
   if (pct === null || pct === undefined) return 'gray';
@@ -46,11 +47,11 @@ function MetricCard({ metric, selected, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`text-left p-4 bg-white border rounded transition ${selected ? 'border-ink ring-1 ring-ink' : 'border-rule hover:border-slate-400'}`}
+      className={`text-left p-4 bg-surface border rounded transition ${selected ? 'border-ink ring-1 ring-ink' : 'border-rule hover:border-text-dim'}`}
     >
-      <div className="text-xs font-medium text-slate-500 mb-1 leading-snug flex items-center gap-1.5">
+      <div className="text-xs font-medium text-text-muted mb-1 leading-snug flex items-center gap-1.5">
         {label}
-        {metric.reference && <span className="text-[9px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full flex-shrink-0">Reference</span>}
+        {metric.reference && <span className="text-[9px] font-semibold uppercase tracking-wide bg-surface-2 text-text-dim px-1.5 py-0.5 rounded-full flex-shrink-0">Reference</span>}
       </div>
       <div className="flex items-end justify-between">
         <span className="font-serif text-3xl font-semibold text-ink">{latestPct !== null ? `${Math.round(latestPct)}%` : '—'}</span>
@@ -61,26 +62,26 @@ function MetricCard({ metric, selected, onClick }) {
           </span>
         )}
       </div>
-      <div className="relative h-1 bg-slate-100 mt-2 overflow-hidden">
+      <div className="relative h-1 bg-surface-2 mt-2 overflow-hidden">
         <div className={`h-full ${statusBar[status]}`} style={{ width: `${latestPct !== null ? Math.min(100, latestPct) : 0}%` }} />
-        <div className="absolute top-0 bottom-0 w-px bg-slate-400" style={{ left: `${Math.min(100, target)}%` }} />
+        <div className="absolute top-0 bottom-0 w-px bg-text-dim" style={{ left: `${Math.min(100, target)}%` }} />
       </div>
-      <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
+      <div className="text-xs text-text-dim mt-1 flex items-center justify-between">
         <span>Target {target}% · n={metric.n}</span>
-        {!metric.reference && metric.weight !== 1 && <span className="font-medium text-slate-500">{metric.weight}× weight</span>}
+        {!metric.reference && metric.weight !== 1 && <span className="font-medium text-text-muted">{metric.weight}× weight</span>}
       </div>
     </button>
   );
 }
 
 function BelowTargetList({ list }) {
-  if (list.length === 0) return <p className="text-sm text-slate-400">Everything here is meeting target for the latest month.</p>;
+  if (list.length === 0) return <p className="text-sm text-text-dim">Everything here is meeting target for the latest month.</p>;
   return (
-    <div className="bg-white border border-rule divide-y divide-rule">
+    <div className="bg-surface border border-rule divide-y divide-rule">
       {list.map((m) => (
         <div key={m.key} className="flex items-center justify-between px-4 py-2.5 text-sm">
-          <span className="text-slate-700">{m.label}</span>
-          <span className="font-medium text-status-bad">{Math.round(m.latestPct)}% <span className="text-slate-400 font-normal">/ target {m.target}%</span></span>
+          <span className="text-ink">{m.label}</span>
+          <span className="font-medium text-status-bad">{Math.round(m.latestPct)}% <span className="text-text-dim font-normal">/ target {m.target}%</span></span>
         </div>
       ))}
     </div>
@@ -257,6 +258,31 @@ export default function Dashboard({ user, onLogout }) {
     return Math.round((weightedSum / totalWeight) * 10) / 10;
   }
 
+  function categoryMonthlySeries(cat) {
+    if (!monthlyData) return [];
+    const catMetrics = withStatus.filter((m) => m.category === cat && !m.reference);
+    return monthlyData.months.map((month) => {
+      let totalWeight = 0;
+      let weightedSum = 0;
+      catMetrics.forEach((m) => {
+        const full = monthlyData.metrics.find((x) => x.key === m.key);
+        const pct = full ? full.byMonth[month] : undefined;
+        if (pct !== undefined && pct !== null) {
+          totalWeight += m.weight;
+          weightedSum += pct * m.weight;
+        }
+      });
+      return { month, pct: totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) / 10 : null };
+    });
+  }
+
+  function categoryWeightedTarget(cat) {
+    const catMetrics = withStatus.filter((m) => m.category === cat && !m.reference);
+    const totalWeight = catMetrics.reduce((s, m) => s + m.weight, 0);
+    if (totalWeight === 0) return 85;
+    return Math.round(catMetrics.reduce((s, m) => s + m.target * m.weight, 0) / totalWeight);
+  }
+
   const trendChartData = useMemo(() => {
     if (!trend) return [];
     const months = Array.from(new Set([
@@ -280,7 +306,7 @@ export default function Dashboard({ user, onLogout }) {
   const allMonths = monthlyData ? monthlyData.months : [];
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400 text-sm">Loading dashboard…</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-surface-2 text-text-dim text-sm">Loading dashboard…</div>;
   }
 
   const detailMetric = selectedMetric ? withStatus.find((m) => m.key === selectedMetric) : null;
@@ -294,11 +320,11 @@ export default function Dashboard({ user, onLogout }) {
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-editorial mb-1.5">Quality &amp; Patient Safety — Ongoing Compliance Report</p>
               <h1 className="font-serif text-3xl font-semibold text-ink tracking-tight leading-tight">Quality and Patient Safety Volunteer Program</h1>
-              <p className="text-sm text-slate-500 mt-1.5 font-serif italic">Falls &amp; hospital-acquired pressure injury prevention, Dell Seton Medical Center</p>
+              <p className="text-sm text-text-muted mt-1.5 font-serif italic">Falls &amp; hospital-acquired pressure injury prevention, Dell Seton Medical Center</p>
             </div>
             <div className="text-right flex-shrink-0 text-sm">
               <div className="font-medium text-ink">{user.display_name || user.username}</div>
-              <div className="text-xs text-slate-400 mb-1.5 capitalize">{user.role}</div>
+              <div className="text-xs text-text-dim mb-1.5 capitalize">{user.role}</div>
               <div className="flex gap-3 justify-end text-xs">
                 <button onClick={() => setShowPassword(true)} className="text-editorial underline underline-offset-2">Change password</button>
                 <button onClick={onLogout} className="text-editorial underline underline-offset-2">Log out</button>
@@ -318,7 +344,7 @@ export default function Dashboard({ user, onLogout }) {
                 className={`px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px ${
                   activeTab === tab
                     ? (tab === 'overview' ? 'border-ink text-ink' : `${CATEGORY_META[tab].text}`)
-                    : 'border-transparent text-slate-400 hover:text-slate-600'
+                    : 'border-transparent text-text-dim hover:text-text-muted'
                 }`}
                 style={activeTab === tab && tab !== 'overview' ? { borderColor: 'currentColor' } : undefined}
               >
@@ -327,21 +353,21 @@ export default function Dashboard({ user, onLogout }) {
             ))}
           </div>
           <div className="flex gap-2 pb-2">
-            <button onClick={() => setShowAddVisit(true)} className="px-3 py-1.5 text-sm font-medium bg-ink text-white rounded flex items-center gap-1.5">
+            <button onClick={() => setShowAddVisit(true)} className="px-3 py-1.5 text-sm font-medium bg-ink text-paper rounded flex items-center gap-1.5">
               <Plus size={14} /> Add visit
             </button>
             {isAdmin && (
-              <button onClick={() => { setShowQuality(true); runQualityCheck(); }} className="p-1.5 rounded border border-rule text-slate-500" title="Data quality check">
+              <button onClick={() => { setShowQuality(true); runQualityCheck(); }} className="p-1.5 rounded border border-rule text-text-muted" title="Data quality check">
                 <ShieldCheck size={15} />
               </button>
             )}
             {isAdmin && (
-              <button onClick={() => setShowUsers(true)} className="p-1.5 rounded border border-rule text-slate-500" title="Manage users">
+              <button onClick={() => setShowUsers(true)} className="p-1.5 rounded border border-rule text-text-muted" title="Manage users">
                 <Users size={15} />
               </button>
             )}
             {isAdmin && (
-              <button onClick={() => setShowSettings(true)} className="p-1.5 rounded border border-rule text-slate-500" title="Target thresholds">
+              <button onClick={() => setShowSettings(true)} className="p-1.5 rounded border border-rule text-text-muted" title="Target thresholds">
                 <Settings size={15} />
               </button>
             )}
@@ -357,13 +383,27 @@ export default function Dashboard({ user, onLogout }) {
                 const avg = categoryAvg(list);
                 return (
                   <button key={cat} onClick={() => setActiveTab(cat)}
-                    className="text-left p-5 bg-white border border-rule hover:border-slate-400 transition">
+                    className="text-left p-5 bg-surface border border-rule hover:border-text-dim transition">
                     <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${CATEGORY_META[cat].text}`}>{CATEGORY_META[cat].label}</div>
                     <div className="font-serif text-4xl font-semibold text-ink">{avg !== null ? `${avg}%` : '—'}</div>
-                    <div className="text-xs text-slate-400 mt-1">weighted average, {countable.length} metrics, latest month</div>
+                    <div className="text-xs text-text-dim mt-1">weighted average, {countable.length} metrics, latest month</div>
                   </button>
                 );
               })}
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-ink font-serif mb-1">Since program start</h2>
+              <p className="text-xs text-text-dim mb-3">Weighted compliance rate by month, every audit on record — {allMonths[0] ? formatMonth(allMonths[0]) : ''} through {allMonths[allMonths.length - 1] ? formatMonth(allMonths[allMonths.length - 1]) : ''}.</p>
+              <div className="grid md:grid-cols-3 gap-3">
+                {['fall', 'hapi', 'education'].map((cat) => (
+                  <PalantirBarChart
+                    key={cat}
+                    label={CATEGORY_META[cat].label}
+                    series={categoryMonthlySeries(cat)}
+                    target={categoryWeightedTarget(cat)}
+                  />
+                ))}
+              </div>
             </div>
             <div>
               <h2 className="text-sm font-semibold text-ink font-serif mb-2">Needs attention</h2>
@@ -387,7 +427,7 @@ export default function Dashboard({ user, onLogout }) {
             <div>
               <div className="mb-2">
                 <h2 className="text-sm font-semibold text-ink font-serif">Figure 1. Compliance by metric, last 6 months</h2>
-                <p className="text-xs text-slate-400">Shaded region indicates performance below the target threshold for each metric.</p>
+                <p className="text-xs text-text-dim">Shaded region indicates performance below the target threshold for each metric.</p>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {catMetrics.map((m) => (
@@ -397,34 +437,34 @@ export default function Dashboard({ user, onLogout }) {
             </div>
 
             {detailMetric && detailMetric.category === activeTab && (
-              <div className="bg-white border border-rule p-4 md:p-5">
+              <div className="bg-surface border border-rule p-4 md:p-5">
                 <div className="flex items-baseline justify-between mb-3">
                   <h3 className="text-sm font-medium text-ink font-serif">Figure 2. {detailMetric.label} — full history by unit</h3>
-                  <span className="text-xs text-slate-400">target {detailMetric.target}%</span>
+                  <span className="text-xs text-text-dim">target {detailMetric.target}%</span>
                 </div>
                 {trendLoading ? (
-                  <div className="h-64 flex items-center justify-center text-sm text-slate-400">Loading…</div>
+                  <div className="h-64 flex items-center justify-center text-sm text-text-dim">Loading…</div>
                 ) : trendChartData.length === 0 ? (
-                  <p className="text-sm text-slate-400">No dated audits for this metric yet.</p>
+                  <p className="text-sm text-text-dim">No dated audits for this metric yet.</p>
                 ) : (
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={trendChartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={{ stroke: '#d8d5ce' }} tickLine={false} />
-                        <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} ticks={[0, 25, 50, 75, 100]} />
-                        <Tooltip contentStyle={{ fontSize: 12, border: '1px solid #d8d5ce', borderRadius: 2 }} />
+                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#8a8a86' }} axisLine={{ stroke: '#2a2a2a' }} tickLine={false} />
+                        <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#8a8a86' }} axisLine={false} tickLine={false} ticks={[0, 25, 50, 75, 100]} />
+                        <Tooltip contentStyle={{ fontSize: 12, border: '1px solid #2a2a2a', borderRadius: 2, background: '#1c1c1c', color: '#f2f2f0' }} />
                         <Legend wrapperStyle={{ fontSize: 11 }} iconType="plainline" />
-                        <ReferenceLine y={detailMetric.target} stroke="#a8a49a" strokeDasharray="3 3" strokeWidth={1} />
-                        <Line type="monotone" dataKey="Overall" stroke="#1a1a1a" strokeWidth={2} dot={{ r: 2.5 }} connectNulls isAnimationActive={false} />
+                        <ReferenceLine y={detailMetric.target} stroke="#4a4a46" strokeDasharray="3 3" strokeWidth={1} />
+                        <Line type="monotone" dataKey="Overall" stroke="#f2f2f0" strokeWidth={2} dot={{ r: 2.5 }} connectNulls isAnimationActive={false} />
                         {locationsInTrend.map((loc) => (
-                          <Line key={loc} type="monotone" dataKey={loc} stroke={LOCATION_COLORS[loc] || '#8c6318'} strokeWidth={1.25} strokeDasharray="4 3" dot={{ r: 1.5 }} connectNulls isAnimationActive={false} />
+                          <Line key={loc} type="monotone" dataKey={loc} stroke={LOCATION_COLORS[loc] || '#8a8a86'} strokeWidth={1.25} strokeDasharray="4 3" dot={{ r: 1.5 }} connectNulls isAnimationActive={false} />
                         ))}
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                 )}
                 {locationsInTrend.length === 0 && (
-                  <p className="text-xs text-slate-400 mt-2">Location wasn't recorded for most audits of this metric, so only the overall trend is shown.</p>
+                  <p className="text-xs text-text-dim mt-2">Location wasn't recorded for most audits of this metric, so only the overall trend is shown.</p>
                 )}
               </div>
             )}
@@ -440,15 +480,15 @@ export default function Dashboard({ user, onLogout }) {
                 <select
                   value={monthFilter}
                   onChange={(e) => setMonthFilter(e.target.value)}
-                  className="text-xs border border-rule rounded px-2 py-1 text-slate-600"
+                  className="text-xs border border-rule rounded px-2 py-1 text-text-muted"
                 >
                   <option value="">Most recent 100</option>
                   {allMonths.slice().reverse().map((mo) => <option key={mo} value={mo}>{formatMonth(mo)}</option>)}
                 </select>
               </div>
-              <div className="bg-white border-t-2 border-b border-ink overflow-x-auto">
+              <div className="bg-surface border-t-2 border-b border-ink overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="text-slate-500 text-xs uppercase tracking-wide">
+                  <thead className="text-text-muted text-xs uppercase tracking-wide">
                     <tr className="border-b border-ink">
                       <th className="text-left px-3 py-2 font-medium">Date</th>
                       <th className="text-left px-3 py-2 font-medium">Location</th>
@@ -461,14 +501,14 @@ export default function Dashboard({ user, onLogout }) {
                   <tbody>
                     {recentVisits.map((v) => (
                       <tr key={v.id} className="border-t border-rule">
-                        <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{v.audit_date || '—'}</td>
-                        <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{v.location || '—'}</td>
-                        <td className="px-3 py-2 text-slate-600">{v.room_number || '—'}</td>
-                        <td className="px-3 py-2 text-slate-600 capitalize">{v.is_fall_risk || '—'}</td>
-                        <td className="px-3 py-2 text-slate-600 capitalize">{v.is_hapi_risk || '—'}</td>
+                        <td className="px-3 py-2 text-text-muted whitespace-nowrap">{v.audit_date || '—'}</td>
+                        <td className="px-3 py-2 text-text-muted whitespace-nowrap">{v.location || '—'}</td>
+                        <td className="px-3 py-2 text-text-muted">{v.room_number || '—'}</td>
+                        <td className="px-3 py-2 text-text-muted capitalize">{v.is_fall_risk || '—'}</td>
+                        <td className="px-3 py-2 text-text-muted capitalize">{v.is_hapi_risk || '—'}</td>
                         <td className="px-3 py-2 text-right">
                           {isAdmin && (
-                            <button onClick={() => handleDeleteVisit(v.id)} className="text-slate-300 hover:text-status-bad">
+                            <button onClick={() => handleDeleteVisit(v.id)} className="text-text-dim hover:text-status-bad">
                               <Trash2 size={14} />
                             </button>
                           )}
@@ -488,31 +528,31 @@ export default function Dashboard({ user, onLogout }) {
       )}
 
       {showQuality && isAdmin && (
-        <div className="fixed inset-0 bg-slate-900 bg-opacity-40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded p-6 w-full max-w-2xl max-h-[80vh] flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-surface rounded p-6 w-full max-w-2xl max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between mb-1">
               <h3 className="font-serif text-lg font-semibold text-ink flex items-center gap-2"><ShieldCheck size={16} /> Data quality check</h3>
-              <button onClick={() => setShowQuality(false)}><X size={18} className="text-slate-400" /></button>
+              <button onClick={() => setShowQuality(false)}><X size={18} className="text-text-dim" /></button>
             </div>
-            <p className="text-xs text-slate-500 mb-3">
+            <p className="text-xs text-text-muted mb-3">
               Rule-based checks against the current data: implausible scores, answers that contradict a stated risk level, and possible duplicate entries. This flags rows worth a human look — it can't independently confirm what actually happened in a room, only that something about the entry looks inconsistent.
             </p>
             <div className="overflow-y-auto flex-1 space-y-2">
               {qualityIssues === null ? (
-                <p className="text-sm text-slate-400">Checking…</p>
+                <p className="text-sm text-text-dim">Checking…</p>
               ) : qualityIssues.length === 0 ? (
-                <p className="text-sm text-slate-400">No issues found by these checks.</p>
+                <p className="text-sm text-text-dim">No issues found by these checks.</p>
               ) : (
                 qualityIssues.map((issue, i) => (
-                  <div key={i} className="flex items-center justify-between gap-3 border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                  <div key={i} className="flex items-center justify-between gap-3 border border-rule rounded px-3 py-2 text-sm bg-surface-2 text-ink">
                     <div>
-                      <div className="font-medium text-slate-700">{issue.type}</div>
-                      <div className="text-xs text-slate-400">
+                      <div className="font-medium text-ink">{issue.type}</div>
+                      <div className="text-xs text-text-dim">
                         {issue.date || 'no date'} · room {issue.room || '—'}{issue.detail ? ` · value: ${issue.detail}` : ''}
                       </div>
                     </div>
                     {issue.id && (
-                      <button onClick={() => handleDeleteFlagged(issue.id)} className="text-slate-300 hover:text-red-500 flex-shrink-0">
+                      <button onClick={() => handleDeleteFlagged(issue.id)} className="text-text-dim hover:text-status-bad flex-shrink-0">
                         <Trash2 size={14} />
                       </button>
                     )}
@@ -525,55 +565,55 @@ export default function Dashboard({ user, onLogout }) {
       )}
 
       {showSettings && isAdmin && (
-        <div className="fixed inset-0 bg-slate-900 bg-opacity-40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded p-6 w-full max-w-md space-y-3 max-h-96 overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-surface rounded p-6 w-full max-w-md space-y-3 max-h-96 overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="font-serif text-lg font-semibold text-ink">Target thresholds</h3>
-              <button onClick={() => setShowSettings(false)}><X size={18} className="text-slate-400" /></button>
+              <button onClick={() => setShowSettings(false)}><X size={18} className="text-text-dim" /></button>
             </div>
             {withStatus.map((m) => (
               <div key={m.key} className="flex items-center justify-between gap-3">
-                <span className="text-sm text-slate-600 flex-1">{m.label}</span>
+                <span className="text-sm text-text-muted flex-1">{m.label}</span>
                 <input
                   type="number" min="0" max="100" value={m.target}
                   onChange={(e) => handleTargetChange(m.key, Number(e.target.value))}
-                  className="w-16 border border-slate-200 rounded-lg px-2 py-1 text-sm text-right"
+                  className="w-16 border border-rule rounded-lg px-2 py-1 text-sm text-right"
                 />
-                <span className="text-xs text-slate-400">%</span>
+                <span className="text-xs text-text-dim">%</span>
               </div>
             ))}
-            <div className="pt-3 border-t border-slate-100">
-              <button onClick={() => setShowClearConfirm(true)} className="w-full text-sm text-red-500 font-medium text-left underline">Clear all visit data</button>
+            <div className="pt-3 border-t border-rule">
+              <button onClick={() => setShowClearConfirm(true)} className="w-full text-sm text-status-bad font-medium text-left underline">Clear all visit data</button>
             </div>
           </div>
         </div>
       )}
 
       {showUsers && isAdmin && (
-        <div className="fixed inset-0 bg-slate-900 bg-opacity-40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded p-6 w-full max-w-lg space-y-4 max-h-96 overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-surface rounded p-6 w-full max-w-lg space-y-4 max-h-96 overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="font-serif text-lg font-semibold text-ink">Manage users</h3>
-              <button onClick={() => setShowUsers(false)}><X size={18} className="text-slate-400" /></button>
+              <button onClick={() => setShowUsers(false)}><X size={18} className="text-text-dim" /></button>
             </div>
             <div className="space-y-2">
               {users.map((u) => (
-                <div key={u.id} className="border-b border-slate-100 pb-2">
+                <div key={u.id} className="border-b border-rule pb-2">
                   <div className="flex items-center justify-between gap-2 text-sm">
                     <div>
-                      <span className="font-medium text-slate-700">{u.display_name || u.username}</span>
-                      <span className="text-xs text-slate-400 ml-2">@{u.username}</span>
-                      <span className={`text-xs ml-2 px-1.5 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-slate-100 text-slate-600' : 'bg-teal-50 text-teal-600'}`}>{u.role}</span>
+                      <span className="font-medium text-ink">{u.display_name || u.username}</span>
+                      <span className="text-xs text-text-dim ml-2">@{u.username}</span>
+                      <span className={`text-xs ml-2 px-1.5 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-surface-2 text-text-muted' : 'bg-surface-2 text-text-primary'}`}>{u.role}</span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => { setResetPasswordFor(resetPasswordFor === u.id ? null : u.id); setResetPasswordValue(''); setResetPasswordError(null); }}
-                        className="text-slate-300 hover:text-slate-600" title="Reset password"
+                        className="text-text-dim hover:text-text-muted" title="Reset password"
                       >
                         <KeyRound size={14} />
                       </button>
                       {u.id !== user.id && (
-                        <button onClick={() => handleDeleteUser(u.id)} className="text-slate-300 hover:text-status-bad" title="Remove user">
+                        <button onClick={() => handleDeleteUser(u.id)} className="text-text-dim hover:text-status-bad" title="Remove user">
                           <Trash2 size={14} />
                         </button>
                       )}
@@ -592,7 +632,7 @@ export default function Dashboard({ user, onLogout }) {
                             placeholder="New password (8+ characters)"
                             className="flex-1 border border-rule rounded px-2 py-1 text-xs"
                           />
-                          <button onClick={() => handleResetPassword(u.id)} className="text-xs bg-ink text-white px-2 py-1 rounded flex-shrink-0">Set</button>
+                          <button onClick={() => handleResetPassword(u.id)} className="text-xs bg-ink text-paper px-2 py-1 rounded flex-shrink-0">Set</button>
                         </>
                       )}
                       {resetPasswordError && <p className="text-xs text-status-bad">{resetPasswordError}</p>}
@@ -600,49 +640,49 @@ export default function Dashboard({ user, onLogout }) {
                   )}
                 </div>
               ))}
-              {users.length === 0 && <p className="text-sm text-slate-400">No other users yet.</p>}
+              {users.length === 0 && <p className="text-sm text-text-dim">No other users yet.</p>}
             </div>
-            <div className="pt-3 border-t border-slate-100 space-y-2">
-              <h4 className="text-sm font-semibold text-slate-700">Add a user</h4>
-              <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value })} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
+            <div className="pt-3 border-t border-rule space-y-2">
+              <h4 className="text-sm font-semibold text-ink">Add a user</h4>
+              <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value })} className="w-full border border-rule rounded px-3 py-2 text-sm bg-surface-2 text-ink">
                 <option value="volunteer">Volunteer</option>
                 <option value="admin">Admin</option>
               </select>
-              <input value={newUser.display_name} onChange={(e) => setNewUser({ ...newUser, display_name: e.target.value })} placeholder="Full name" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-              <input value={newUser.username} onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} placeholder="Username" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-              <input value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} placeholder="Temporary password (8+ characters)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-              {userError && <p className="text-xs text-red-500">{userError}</p>}
-              <button onClick={handleAddUser} className="w-full bg-ink text-white rounded py-2 text-sm font-medium">Create account</button>
+              <input value={newUser.display_name} onChange={(e) => setNewUser({ ...newUser, display_name: e.target.value })} placeholder="Full name" className="w-full border border-rule rounded px-3 py-2 text-sm bg-surface-2 text-ink" />
+              <input value={newUser.username} onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} placeholder="Username" className="w-full border border-rule rounded px-3 py-2 text-sm bg-surface-2 text-ink" />
+              <input value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} placeholder="Temporary password (8+ characters)" className="w-full border border-rule rounded px-3 py-2 text-sm bg-surface-2 text-ink" />
+              {userError && <p className="text-xs text-status-bad">{userError}</p>}
+              <button onClick={handleAddUser} className="w-full bg-ink text-paper rounded py-2 text-sm font-medium">Create account</button>
             </div>
           </div>
         </div>
       )}
 
       {showPassword && (
-        <div className="fixed inset-0 bg-slate-900 bg-opacity-40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded p-6 w-full max-w-sm space-y-3">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-surface rounded p-6 w-full max-w-sm space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-serif text-lg font-semibold text-ink flex items-center gap-2"><KeyRound size={16} /> Change password</h3>
-              <button onClick={() => { setShowPassword(false); setPasswordError(null); setPasswordMessage(null); }}><X size={18} className="text-slate-400" /></button>
+              <button onClick={() => { setShowPassword(false); setPasswordError(null); setPasswordMessage(null); }}><X size={18} className="text-text-dim" /></button>
             </div>
-            <input type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} placeholder="Current password" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-            <input type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} placeholder="New password (8+ characters)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-            {passwordError && <p className="text-xs text-red-500">{passwordError}</p>}
-            {passwordMessage && <p className="text-xs text-emerald-600">{passwordMessage}</p>}
-            <button onClick={handleChangePassword} className="w-full bg-ink text-white rounded py-2 text-sm font-medium">Update password</button>
+            <input type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} placeholder="Current password" className="w-full border border-rule rounded px-3 py-2 text-sm bg-surface-2 text-ink" />
+            <input type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} placeholder="New password (8+ characters)" className="w-full border border-rule rounded px-3 py-2 text-sm bg-surface-2 text-ink" />
+            {passwordError && <p className="text-xs text-status-bad">{passwordError}</p>}
+            {passwordMessage && <p className="text-xs text-status-good">{passwordMessage}</p>}
+            <button onClick={handleChangePassword} className="w-full bg-ink text-paper rounded py-2 text-sm font-medium">Update password</button>
           </div>
         </div>
       )}
 
       {showClearConfirm && (
-        <div className="fixed inset-0 bg-slate-900 bg-opacity-40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded p-6 w-full max-w-sm space-y-3 text-center">
-            <AlertTriangle className="mx-auto text-orange-500" size={28} />
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-surface rounded p-6 w-full max-w-sm space-y-3 text-center">
+            <AlertTriangle className="mx-auto text-status-warn" size={28} />
             <h3 className="font-serif text-lg font-semibold text-ink">Clear all visit data?</h3>
-            <p className="text-sm text-slate-500">This removes every audit visit — including the historical import — for everyone. It can't be undone.</p>
+            <p className="text-sm text-text-muted">This removes every audit visit — including the historical import — for everyone. It can't be undone.</p>
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setShowClearConfirm(false)} className="flex-1 border border-slate-200 rounded-lg py-2 text-sm font-medium text-slate-600">Cancel</button>
-              <button onClick={handleClearAll} className="flex-1 bg-red-600 text-white rounded-lg py-2 text-sm font-medium">Yes, clear it</button>
+              <button onClick={() => setShowClearConfirm(false)} className="flex-1 border border-rule rounded-lg py-2 text-sm font-medium text-text-muted">Cancel</button>
+              <button onClick={handleClearAll} className="flex-1 bg-status-bad text-white rounded-lg py-2 text-sm font-medium">Yes, clear it</button>
             </div>
           </div>
         </div>

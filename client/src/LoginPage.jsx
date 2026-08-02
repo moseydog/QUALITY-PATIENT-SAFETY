@@ -39,25 +39,25 @@ export default function LoginPage({ onLogin }) {
           <button
             type="button"
             onClick={() => setPortal('volunteer')}
-            className={`flex-1 py-2 text-sm font-medium transition ${portal === 'volunteer' ? 'bg-hapi-accent text-white' : 'bg-white text-slate-500'}`}
+            className={`flex-1 py-2 text-sm font-medium transition ${portal === 'volunteer' ? 'bg-hapi-accent text-white' : 'bg-surface text-text-muted'}`}
           >
             Volunteer
           </button>
           <button
             type="button"
             onClick={() => setPortal('admin')}
-            className={`flex-1 py-2 text-sm font-medium transition ${portal === 'admin' ? 'bg-ink text-white' : 'bg-white text-slate-500'}`}
+            className={`flex-1 py-2 text-sm font-medium transition ${portal === 'admin' ? 'bg-ink text-paper' : 'bg-surface text-text-muted'}`}
           >
             Admin
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="bg-white border-t-2 border-ink border-x border-b border-rule p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-surface border-t-2 border-ink border-x border-b border-rule p-6 space-y-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-editorial mb-1">{portal === 'admin' ? 'Administrator access' : 'Volunteer access'}</p>
             <h1 className="font-serif text-xl font-semibold text-ink">Quality and Patient Safety Volunteer Program</h1>
           </div>
           <div>
-            <label className="text-xs text-slate-500">Username</label>
+            <label className="text-xs text-text-muted">Username</label>
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -67,7 +67,7 @@ export default function LoginPage({ onLogin }) {
             />
           </div>
           <div>
-            <label className="text-xs text-slate-500">Password</label>
+            <label className="text-xs text-text-muted">Password</label>
             <input
               type="password"
               value={password}
@@ -81,7 +81,7 @@ export default function LoginPage({ onLogin }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-ink text-white rounded py-2 text-sm font-medium disabled:opacity-50"
+            className="w-full bg-ink text-paper rounded py-2 text-sm font-medium disabled:opacity-50"
           >
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
