@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Legend, Tooltip } from 'recharts';
 
-const COLORS = { yes: '#4a90c9', no: '#c0392b' };
+const COLORS = { yes: '#3d6690', no: '#a33a2e' };
 
 function MiniPie({ compliant, total, tierLabel }) {
   if (total === 0) {

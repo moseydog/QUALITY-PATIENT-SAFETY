@@ -14,6 +14,11 @@ const SCOPE_START = '2025-09';
 const SCOPE_END = '2026-04';
 const SCOPE_SQL = `substr(audit_date,1,7) BETWEEN '${SCOPE_START}' AND '${SCOPE_END}'`;
 
+// A month with only a handful of answered audits can't support a meaningful
+// rate - one lucky/unlucky audit would swing it from 0% to 100%. Below this,
+// the month is treated as not-yet-reportable rather than plotted.
+const MIN_SAMPLE_SIZE = 10;
+
 function metricOrThrow(key) {
   const m = METRICS.find((x) => x.key === key);
   if (!m) throw new Error('Unknown metric');
@@ -21,6 +26,9 @@ function metricOrThrow(key) {
 }
 
 // One metric's month-by-month {compliant, total} rows, respecting its exclude list.
+// Months with fewer than MIN_SAMPLE_SIZE answered audits are dropped entirely,
+// not just zeroed - a single lucky/unlucky audit shouldn't read as "100%" or "0%"
+// for the whole month.
 function monthlyRows(metric) {
   const notInSql = metric.exclude.length ? `AND ${metric.key} NOT IN (${metric.exclude.map(() => '?').join(',')})` : '';
   const sql = `
@@ -29,7 +37,7 @@ function monthlyRows(metric) {
       COUNT(*) as total
     FROM audit_visits
     WHERE ${metric.key} IS NOT NULL AND audit_date IS NOT NULL AND ${SCOPE_SQL} ${notInSql}
-    GROUP BY month ORDER BY month
+    GROUP BY month HAVING total >= ${MIN_SAMPLE_SIZE} ORDER BY month
   `;
   return db.prepare(sql).all(...metric.exclude);
 }
@@ -77,7 +85,7 @@ router.get('/stats/trend/:key', (req, res) => {
       COUNT(*) as total
     FROM audit_visits
     WHERE ${metric.key} IS NOT NULL AND audit_date IS NOT NULL AND location IS NOT NULL AND ${SCOPE_SQL} ${notInSql}
-    GROUP BY month, location ORDER BY month
+    GROUP BY month, location HAVING total >= ${MIN_SAMPLE_SIZE} ORDER BY month
   `;
   const byLocRows = db.prepare(byLocSql).all(...metric.exclude);
   const byLocation = byLocRows.map((r) => ({
@@ -186,7 +194,8 @@ router.get('/stats/stratified/:category', (req, res) => {
     const inTier = rows.filter((r) => tier.cmp(r.score));
     const compliant = inTier.filter((r) => r.v === 'yes').length;
     const total = inTier.length;
-    return { compliant, total, pct: total > 0 ? Math.round((compliant / total) * 1000) / 10 : null };
+    if (total < MIN_SAMPLE_SIZE) return { compliant, total, pct: null };
+    return { compliant, total, pct: Math.round((compliant / total) * 1000) / 10 };
   }
 
   const metrics = spec.metricKeys

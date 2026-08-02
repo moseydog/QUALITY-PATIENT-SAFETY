@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, Legend,
-  ResponsiveContainer, ReferenceLine,
+  ResponsiveContainer, ReferenceLine, CartesianGrid,
 } from 'recharts';
 import {
   Plus, X, Trash2, Users, KeyRound, Settings, TrendingUp, TrendingDown,
@@ -10,7 +10,7 @@ import {
 import AddVisitModal from './components/AddVisitModal.jsx';
 import MonthlyTable from './components/MonthlyTable.jsx';
 import MiniTrendChart from './components/MiniTrendChart.jsx';
-import PalantirBarChart from './components/PalantirBarChart.jsx';
+import CategoryRunChart from './components/CategoryRunChart.jsx';
 import StratifiedFindings from './components/StratifiedFindings.jsx';
 
 const CATEGORY_META = {
@@ -391,7 +391,7 @@ export default function Dashboard({ user, onLogout }) {
               <p className="text-xs text-text-dim mb-3">Weighted compliance rate by month, every audit on record — {allMonths[0] ? formatMonth(allMonths[0]) : ''} through {allMonths[allMonths.length - 1] ? formatMonth(allMonths[allMonths.length - 1]) : ''}.</p>
               <div className="grid md:grid-cols-3 gap-3">
                 {['fall', 'hapi', 'education'].map((cat) => (
-                  <PalantirBarChart
+                  <CategoryRunChart
                     key={cat}
                     label={CATEGORY_META[cat].label}
                     series={categoryMonthlySeries(cat)}
@@ -436,27 +436,28 @@ export default function Dashboard({ user, onLogout }) {
             </div>
 
             {detailMetric && detailMetric.category === activeTab && (
-              <div className="bg-panel p-4 md:p-5">
+              <div className="bg-surface border border-rule rounded p-4 md:p-5">
                 <div className="flex items-baseline justify-between mb-3">
-                  <h3 className="text-sm font-medium text-panel-text">{detailMetric.label} — full history by unit</h3>
-                  <span className="text-xs text-panel-muted">target {detailMetric.target}%</span>
+                  <h3 className="text-sm font-medium text-ink">{detailMetric.label} — full history by unit</h3>
+                  <span className="text-xs text-text-muted">goal {detailMetric.target}%</span>
                 </div>
                 {trendLoading ? (
-                  <div className="h-64 flex items-center justify-center text-sm text-panel-muted">Loading…</div>
+                  <div className="h-64 flex items-center justify-center text-sm text-text-dim">Loading…</div>
                 ) : trendChartData.length === 0 ? (
-                  <p className="text-sm text-panel-muted">No dated audits for this metric yet.</p>
+                  <p className="text-sm text-text-dim">No dated audits for this metric yet.</p>
                 ) : (
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={trendChartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#8f8f89' }} axisLine={{ stroke: '#333330' }} tickLine={false} />
-                        <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#8f8f89' }} axisLine={false} tickLine={false} ticks={[0, 25, 50, 75, 100]} />
-                        <Tooltip contentStyle={{ fontSize: 12, border: '1px solid #333330', borderRadius: 2, background: '#1c1c1a', color: '#f4f4f0' }} />
-                        <Legend wrapperStyle={{ fontSize: 11, color: '#c9c9c3' }} iconType="plainline" />
-                        <ReferenceLine y={detailMetric.target} stroke="#55554f" strokeDasharray="3 3" strokeWidth={1} />
-                        <Line type="monotone" dataKey="Overall" stroke="#f4f4f0" strokeWidth={2} dot={{ r: 2.5 }} connectNulls isAnimationActive={false} />
+                        <CartesianGrid stroke="#d7dce1" strokeDasharray="0" vertical={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#52626e' }} axisLine={{ stroke: '#d7dce1' }} tickLine={false} />
+                        <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#52626e' }} axisLine={false} tickLine={false} ticks={[0, 25, 50, 75, 100]} />
+                        <Tooltip contentStyle={{ fontSize: 12, border: '1px solid #d7dce1', borderRadius: 2, background: '#ffffff', color: '#12283b' }} />
+                        <Legend wrapperStyle={{ fontSize: 11, color: '#52626e' }} iconType="plainline" />
+                        <ReferenceLine y={detailMetric.target} stroke="#52626e" strokeDasharray="4 3" strokeWidth={1.25} />
+                        <Line type="linear" dataKey="Overall" stroke="#12283b" strokeWidth={2.25} dot={{ r: 3, fill: '#12283b', strokeWidth: 0 }} connectNulls isAnimationActive={false} />
                         {locationsInTrend.map((loc) => (
-                          <Line key={loc} type="monotone" dataKey={loc} stroke={LOCATION_COLORS[loc] || '#8f8f89'} strokeWidth={1.25} strokeDasharray="4 3" dot={{ r: 1.5 }} connectNulls isAnimationActive={false} />
+                          <Line key={loc} type="linear" dataKey={loc} stroke={LOCATION_COLORS[loc] || '#8996a1'} strokeWidth={1.25} strokeDasharray="4 3" dot={{ r: 2 }} connectNulls isAnimationActive={false} />
                         ))}
                       </LineChart>
                     </ResponsiveContainer>
