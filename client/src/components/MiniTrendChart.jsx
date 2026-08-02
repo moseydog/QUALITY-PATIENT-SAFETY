@@ -34,10 +34,10 @@ export default function MiniTrendChart({ metric, monthlyData, monthsToShow = 6 }
   const latest = [...data].reverse().find((d) => d.pct !== null);
 
   return (
-    <div className="bg-white border border-slate-200 rounded p-3">
+    <div className="bg-white border border-rule p-3">
       <div className="flex items-baseline justify-between gap-2 mb-1">
         <h4 className="text-[11px] font-medium text-slate-600 leading-tight">{metric.label}</h4>
-        {latest && <span className="text-sm font-semibold text-slate-800 flex-shrink-0">{Math.round(latest.pct)}%</span>}
+        {latest && <span className="font-serif text-lg font-semibold text-ink flex-shrink-0">{Math.round(latest.pct)}%</span>}
       </div>
       {!hasData ? (
         <div className="h-24 flex items-center justify-center text-xs text-slate-300">No dated data</div>
@@ -45,12 +45,12 @@ export default function MiniTrendChart({ metric, monthlyData, monthsToShow = 6 }
         <div className="h-24">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 4, right: 6, left: -28, bottom: 0 }}>
-              <ReferenceArea y1={0} y2={metric.target} fill="#fef2f2" fillOpacity={0.6} />
-              <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} interval={0} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: '#94a3b8' }} width={26} axisLine={false} tickLine={false} ticks={[0, 50, 100]} />
-              <ReferenceLine y={metric.target} stroke="#94a3b8" strokeDasharray="3 3" strokeWidth={1} />
+              <ReferenceArea y1={0} y2={metric.target} fill="#f7e9e9" fillOpacity={0.7} />
+              <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#a8a49a' }} axisLine={{ stroke: '#d8d5ce' }} tickLine={false} interval={0} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: '#a8a49a' }} width={26} axisLine={false} tickLine={false} ticks={[0, 50, 100]} />
+              <ReferenceLine y={metric.target} stroke="#a8a49a" strokeDasharray="3 3" strokeWidth={1} />
               <Tooltip content={<JournalTooltip />} />
-              <Line type="monotone" dataKey="pct" stroke="#1e293b" strokeWidth={1.5} dot={{ r: 2, fill: '#1e293b', strokeWidth: 0 }} activeDot={{ r: 3 }} connectNulls isAnimationActive={false} />
+              <Line type="monotone" dataKey="pct" stroke="#1a1a1a" strokeWidth={1.5} dot={{ r: 2, fill: '#1a1a1a', strokeWidth: 0 }} activeDot={{ r: 3 }} connectNulls isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>

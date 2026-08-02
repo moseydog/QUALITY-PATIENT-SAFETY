@@ -33,35 +33,35 @@ export default function LoginPage({ onLogin }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-paper flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <div className="flex rounded-lg overflow-hidden border border-slate-200 mb-6">
+        <div className="flex border border-rule mb-6">
           <button
             type="button"
             onClick={() => setPortal('volunteer')}
-            className={`flex-1 py-2 text-sm font-medium transition ${portal === 'volunteer' ? 'bg-teal-600 text-white' : 'bg-white text-slate-500'}`}
+            className={`flex-1 py-2 text-sm font-medium transition ${portal === 'volunteer' ? 'bg-hapi-accent text-white' : 'bg-white text-slate-500'}`}
           >
             Volunteer
           </button>
           <button
             type="button"
             onClick={() => setPortal('admin')}
-            className={`flex-1 py-2 text-sm font-medium transition ${portal === 'admin' ? 'bg-slate-800 text-white' : 'bg-white text-slate-500'}`}
+            className={`flex-1 py-2 text-sm font-medium transition ${portal === 'admin' ? 'bg-ink text-white' : 'bg-white text-slate-500'}`}
           >
             Admin
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-white border-t-2 border-ink border-x border-b border-rule p-6 space-y-4">
           <div>
-            <h1 className="text-lg font-bold text-slate-800">{portal === 'admin' ? 'Admin login' : 'Volunteer login'}</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Quality and Patient Safety Volunteer Program</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-editorial mb-1">{portal === 'admin' ? 'Administrator access' : 'Volunteer access'}</p>
+            <h1 className="font-serif text-xl font-semibold text-ink">Quality and Patient Safety Volunteer Program</h1>
           </div>
           <div>
             <label className="text-xs text-slate-500">Username</label>
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1"
+              className="w-full border border-rule rounded px-3 py-2 text-sm mt-1"
               autoComplete="username"
               required
             />
@@ -72,16 +72,16 @@ export default function LoginPage({ onLogin }) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1"
+              className="w-full border border-rule rounded px-3 py-2 text-sm mt-1"
               autoComplete="current-password"
               required
             />
           </div>
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <p className="text-sm text-status-bad">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-slate-800 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-50"
+            className="w-full bg-ink text-white rounded py-2 text-sm font-medium disabled:opacity-50"
           >
             {loading ? 'Signing in…' : 'Sign in'}
           </button>

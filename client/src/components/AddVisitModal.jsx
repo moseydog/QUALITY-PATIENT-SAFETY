@@ -105,7 +105,7 @@ export default function AddVisitModal({ onClose, onSave, error }) {
   return (
     <div className="fixed inset-0 bg-slate-900 bg-opacity-40 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-        <div className="h-2 bg-violet-600 flex-shrink-0" />
+        <div className="h-2 bg-hapi-accent flex-shrink-0" />
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div>
             <h3 className="font-semibold text-slate-800">Add a room-visit audit</h3>
@@ -250,7 +250,7 @@ export default function AddVisitModal({ onClose, onSave, error }) {
           <button
             onClick={handleSaveClick}
             disabled={checking || submitting || !form.audit_date || !form.room_number.trim()}
-            className="w-full bg-slate-800 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-50"
+            className="w-full bg-ink text-white rounded py-2 text-sm font-medium disabled:opacity-50"
           >
             {checking ? 'Checking…' : submitting ? 'Saving…' : (checked && duplicateCount > 0) ? 'Save anyway' : 'Save visit'}
           </button>

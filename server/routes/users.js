@@ -37,4 +37,16 @@ router.delete('/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+router.put('/:id/reset-password', (req, res) => {
+  const { newPassword } = req.body || {};
+  if (!newPassword || newPassword.length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters' });
+  }
+  const target = db.prepare('SELECT id FROM users WHERE id = ?').get(Number(req.params.id));
+  if (!target) return res.status(404).json({ error: 'No such user' });
+  const hash = bcrypt.hashSync(newPassword, 10);
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, Number(req.params.id));
+  res.json({ ok: true });
+});
+
 module.exports = router;

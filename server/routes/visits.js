@@ -41,6 +41,7 @@ router.get('/stats/summary', (req, res) => {
       label: m.label,
       category: m.category,
       reference: !!m.reference,
+      weight: m.weight || 1,
       target: targets[m.key] ?? m.target,
       latestPct,
       prevPct,
