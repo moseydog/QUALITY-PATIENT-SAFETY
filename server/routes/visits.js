@@ -144,6 +144,68 @@ router.get('/quality-check', requireRole('admin'), (req, res) => {
   res.json({ count: issues.length, issues });
 });
 
+// Risk-stratified snapshot for the most recent in-scope month, mirroring the
+// real monthly summary sheet: compliance broken out by risk-score severity
+// (Braden <=18 / <=14 for HAPI, Morse >=25 / >=45 for Falls), each with the
+// point-change versus the prior month. Positive framing (e.g. "wedges
+// present") reports raw compliance; the underlying fields are all yes/no.
+const STRATA = {
+  hapi: {
+    scoreField: 'braden_score',
+    tiers: [
+      { label: 'Braden ≤ 18', cmp: (v) => v <= 18 },
+      { label: 'Braden ≤ 14', cmp: (v) => v <= 14 },
+    ],
+    metricKeys: ['purple_wedges', 'turned_with_wedges', 'heels_offloaded', 'primo_boots', 'turned_recently', 'specialty_bed_yn'],
+  },
+  fall: {
+    scoreField: 'morse_score',
+    tiers: [
+      { label: 'Morse ≥ 25', cmp: (v) => v >= 25 },
+      { label: 'Morse ≥ 45', cmp: (v) => v >= 45 },
+    ],
+    metricKeys: ['fall_wristband', 'non_slip_socks', 'bed_alarm_on', 'bed_alarm_cord_plugged', 'call_light_reach', 'tips_board_correct', 'posey_alarm_charged', 'gait_belt_present', 'walker_present'],
+  },
+};
+
+router.get('/stats/stratified/:category', (req, res) => {
+  const spec = STRATA[req.params.category];
+  if (!spec) return res.status(404).json({ error: 'Unknown category' });
+
+  const months = db.prepare(`SELECT DISTINCT substr(audit_date,1,7) as month FROM audit_visits WHERE audit_date IS NOT NULL AND ${SCOPE_SQL} ORDER BY month`).all().map((r) => r.month);
+  if (months.length === 0) return res.json({ months: [], tiers: spec.tiers.map((t) => t.label), metrics: [] });
+  const latest = months[months.length - 1];
+  const prior = months.length > 1 ? months[months.length - 2] : null;
+
+  function tierStats(month, metricKey, tier) {
+    if (!month) return null;
+    const rows = db.prepare(
+      `SELECT ${metricKey} as v, ${spec.scoreField} as score FROM audit_visits
+       WHERE substr(audit_date,1,7) = ? AND ${metricKey} IS NOT NULL AND ${spec.scoreField} IS NOT NULL`
+    ).all(month);
+    const inTier = rows.filter((r) => tier.cmp(r.score));
+    const compliant = inTier.filter((r) => r.v === 'yes').length;
+    const total = inTier.length;
+    return { compliant, total, pct: total > 0 ? Math.round((compliant / total) * 1000) / 10 : null };
+  }
+
+  const metrics = spec.metricKeys
+    .map((key) => METRICS.find((m) => m.key === key))
+    .filter(Boolean)
+    .map((m) => {
+      const tiers = spec.tiers.map((tier) => {
+        const latestStat = tierStats(latest, m.key, tier);
+        const priorStat = tierStats(prior, m.key, tier);
+        const delta = latestStat && priorStat && latestStat.pct !== null && priorStat.pct !== null
+          ? Math.round((latestStat.pct - priorStat.pct) * 10) / 10 : null;
+        return { label: tier.label, ...latestStat, delta };
+      });
+      return { key: m.key, label: m.label, tiers };
+    });
+
+  res.json({ latestMonth: latest, priorMonth: prior, tierLabels: spec.tiers.map((t) => t.label), metrics });
+});
+
 router.get('/', (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 50, 500);
   if (req.query.month) {

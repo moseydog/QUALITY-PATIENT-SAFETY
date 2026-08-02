@@ -4,45 +4,47 @@
 @theme {
   --font-sans: 'Manrope', system-ui, sans-serif;
   --font-serif: 'Manrope', system-ui, sans-serif;
-  --color-ink: #111110;
-  --color-paper: #ffffff;
-  --color-rule: #e4e4e0;
-  --color-surface: #f4f4f1;
-  --color-surface-2: #ebebe7;
-  --color-panel: #111110;
-  --color-panel-2: #1c1c1a;
-  --color-panel-text: #f4f4f0;
-  --color-panel-muted: #8f8f89;
-  --color-panel-rule: #333330;
-  --color-text-primary: #111110;
-  --color-text-muted: #55554f;
-  --color-text-dim: #83837c;
-  --color-editorial: #111110;
-  --color-editorial-light: #f4f4f1;
-  --color-falls-accent: #111110;
-  --color-falls-light: #f4f4f1;
-  --color-hapi-accent: #111110;
-  --color-hapi-light: #f4f4f1;
-  --color-edu-accent: #111110;
-  --color-edu-light: #f4f4f1;
-  --color-status-good: #3c6e56;
-  --color-status-good-light: #e3ede8;
-  --color-status-warn: #8a5f28;
-  --color-status-warn-light: #f0e6d6;
-  --color-status-bad: #93392f;
-  --color-status-bad-light: #f2e2e0;
+  --color-ink: #16324a;
+  --color-paper: #f4f6f8;
+  --color-rule: #dde2e7;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef1f4;
+  --color-panel: #16324a;
+  --color-panel-2: #1f4362;
+  --color-panel-text: #f4f6f8;
+  --color-panel-muted: #a8bccd;
+  --color-panel-rule: #2c5170;
+  --color-text-primary: #16324a;
+  --color-text-muted: #5b6b78;
+  --color-text-dim: #8b98a3;
+  --color-editorial: #16324a;
+  --color-editorial-light: #eef1f4;
+  --color-falls-accent: #16324a;
+  --color-falls-light: #eef1f4;
+  --color-hapi-accent: #16324a;
+  --color-hapi-light: #eef1f4;
+  --color-edu-accent: #16324a;
+  --color-edu-light: #eef1f4;
+  --color-accent-blue: #4a90c9;
+  --color-accent-tan: #c9b896;
+  --color-status-good: #2f7d5c;
+  --color-status-good-light: #e2eee7;
+  --color-status-warn: #b8752e;
+  --color-status-warn-light: #f3e7d8;
+  --color-status-bad: #c0392b;
+  --color-status-bad-light: #f5e0dd;
 }
 
 body {
-  background: #ffffff;
+  background: #f4f6f8;
 }
 
 input, select, textarea {
   background-color: #ffffff;
-  color: #111110;
+  color: #16324a;
 }
 input::placeholder, textarea::placeholder {
-  color: #9a9a92;
+  color: #8b98a3;
 }
 input[type="radio"] {
   background-color: transparent;

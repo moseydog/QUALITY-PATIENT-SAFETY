@@ -11,6 +11,7 @@ import AddVisitModal from './components/AddVisitModal.jsx';
 import MonthlyTable from './components/MonthlyTable.jsx';
 import MiniTrendChart from './components/MiniTrendChart.jsx';
 import PalantirBarChart from './components/PalantirBarChart.jsx';
+import StratifiedFindings from './components/StratifiedFindings.jsx';
 
 const CATEGORY_META = {
   fall: { label: 'Fall Prevention', active: 'bg-falls-accent text-white', text: 'text-falls-accent', light: 'bg-falls-light' },
@@ -313,69 +314,56 @@ export default function Dashboard({ user, onLogout }) {
   const catMetrics = activeTab === 'overview' ? null : byCategory[activeTab];
 
   return (
-    <div className="min-h-screen bg-paper">
-      <div className="border-b-2 border-ink">
-        <div className="max-w-6xl mx-auto px-5 md:px-8 pt-6 pb-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center mb-2.5">
-                <span className="bg-ink text-paper text-xs font-semibold px-2.5 py-1">QPS</span>
-                <span className="bg-surface text-ink text-xs font-medium px-2.5 py-1">Volunteer Program</span>
-              </div>
-              <h1 className="text-3xl font-bold text-ink tracking-tight leading-tight">Quality and Patient Safety Volunteer Program</h1>
-              <p className="text-sm text-text-muted mt-1.5">Falls &amp; hospital-acquired pressure injury prevention, Dell Seton Medical Center</p>
-            </div>
-            <div className="text-right flex-shrink-0 text-sm">
-              <div className="font-medium text-ink">{user.display_name || user.username}</div>
-              <div className="text-xs text-text-dim mb-1.5 capitalize">{user.role}</div>
-              <div className="flex gap-3 justify-end text-xs">
-                <button onClick={() => setShowPassword(true)} className="text-ink underline underline-offset-2">Change password</button>
-                <button onClick={onLogout} className="text-ink underline underline-offset-2">Log out</button>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen flex">
+      <aside className="w-60 bg-panel text-panel-text flex-shrink-0 flex flex-col">
+        <div className="p-5 border-b border-panel-rule">
+          <span className="bg-panel-text text-panel text-xs font-bold px-2 py-1 rounded">QPS</span>
+          <h1 className="text-sm font-semibold mt-2.5 leading-snug">Quality and Patient Safety Volunteer Program</h1>
+          <p className="text-[11px] text-panel-muted mt-1">Dell Seton Medical Center</p>
         </div>
-      </div>
-
-      <div className="max-w-6xl mx-auto p-5 md:p-8 space-y-8">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule pb-0">
-          <div className="flex flex-wrap gap-1">
-            {['overview', 'fall', 'hapi', 'education', 'audits'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => { setActiveTab(tab); setSelectedMetric(null); }}
-                className={`px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px ${
-                  activeTab === tab
-                    ? (tab === 'overview' || tab === 'audits' ? 'border-ink text-ink' : `${CATEGORY_META[tab].text}`)
-                    : 'border-transparent text-text-dim hover:text-text-muted'
-                }`}
-                style={activeTab === tab && tab !== 'overview' && tab !== 'audits' ? { borderColor: 'currentColor' } : undefined}
-              >
-                {tab === 'overview' ? 'Overview' : tab === 'audits' ? 'Audits' : CATEGORY_META[tab].label}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-2 pb-2">
-            <button onClick={() => setShowAddVisit(true)} className="px-3 py-1.5 text-sm font-medium bg-ink text-paper rounded flex items-center gap-1.5">
-              <Plus size={14} /> Add visit
+        <nav className="flex-1 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-panel-muted px-2 mb-1.5">Navigation</p>
+          {['overview', 'fall', 'hapi', 'education', 'audits'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => { setActiveTab(tab); setSelectedMetric(null); }}
+              className={`w-full text-left px-2.5 py-2 rounded text-sm font-medium transition mb-0.5 ${
+                activeTab === tab ? 'bg-panel-2 text-panel-text' : 'text-panel-muted hover:bg-panel-2 hover:text-panel-text'
+              }`}
+            >
+              {tab === 'overview' ? 'Overview' : tab === 'audits' ? 'Audits' : CATEGORY_META[tab].label}
             </button>
-            {isAdmin && (
-              <button onClick={() => { setShowQuality(true); runQualityCheck(); }} className="p-1.5 rounded border border-rule text-text-muted" title="Data quality check">
-                <ShieldCheck size={15} />
+          ))}
+          <button onClick={() => setShowAddVisit(true)} className="w-full mt-4 px-2.5 py-2 rounded text-sm font-semibold bg-panel-text text-panel flex items-center gap-1.5 justify-center">
+            <Plus size={14} /> Add visit
+          </button>
+          {isAdmin && (
+            <>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-panel-muted px-2 mb-1.5 mt-5">Admin tools</p>
+              <button onClick={() => { setShowQuality(true); runQualityCheck(); }} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
+                <ShieldCheck size={14} /> Data quality
               </button>
-            )}
-            {isAdmin && (
-              <button onClick={() => setShowUsers(true)} className="p-1.5 rounded border border-rule text-text-muted" title="Manage users">
-                <Users size={15} />
+              <button onClick={() => setShowUsers(true)} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
+                <Users size={14} /> Manage users
               </button>
-            )}
-            {isAdmin && (
-              <button onClick={() => setShowSettings(true)} className="p-1.5 rounded border border-rule text-text-muted" title="Target thresholds">
-                <Settings size={15} />
+              <button onClick={() => setShowSettings(true)} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
+                <Settings size={14} /> Targets
               </button>
-            )}
+            </>
+          )}
+        </nav>
+        <div className="p-4 border-t border-panel-rule text-xs">
+          <div className="font-medium text-panel-text">{user.display_name || user.username}</div>
+          <div className="text-panel-muted capitalize mb-2">{user.role}</div>
+          <div className="flex gap-3">
+            <button onClick={() => setShowPassword(true)} className="text-panel-muted hover:text-panel-text underline underline-offset-2">Password</button>
+            <button onClick={onLogout} className="text-panel-muted hover:text-panel-text underline underline-offset-2">Log out</button>
           </div>
         </div>
+      </aside>
+
+      <main className="flex-1 min-w-0 bg-paper">
+      <div className="max-w-6xl mx-auto p-6 md:p-8 space-y-8">
 
         {activeTab === 'overview' && (
           <div className="space-y-8">
@@ -484,6 +472,10 @@ export default function Dashboard({ user, onLogout }) {
               <h2 className="text-sm font-semibold text-ink mb-2">Needs attention</h2>
               <BelowTargetList list={belowTarget(catMetrics)} />
             </div>
+
+            {(activeTab === 'fall' || activeTab === 'hapi') && (
+              <StratifiedFindings category={activeTab} riskLabel={activeTab === 'hapi' ? 'Braden score' : 'Morse score'} />
+            )}
           </div>
         )}
 
@@ -535,6 +527,7 @@ export default function Dashboard({ user, onLogout }) {
           </div>
         )}
       </div>
+      </main>
 
       {showAddVisit && (
         <AddVisitModal onClose={() => setShowAddVisit(false)} onSave={handleSaveVisit} error={addVisitError} />
