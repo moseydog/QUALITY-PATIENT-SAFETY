@@ -1,5 +1,5 @@
 import React from 'react';
-import { LineChart, Line, ReferenceLine } from 'recharts';
+import { LineChart, Line, ReferenceLine, YAxis } from 'recharts';
 
 const CATEGORY_LABELS = { fall: 'Fall Prevention', hapi: 'HAPI Prevention', education: 'Patient Education' };
 const CATEGORY_ORDER = ['fall', 'hapi', 'education'];
@@ -12,12 +12,18 @@ function statusColor(pct, target) {
 }
 
 function Sparkline({ series, target }) {
-  const hasData = series.some((d) => d.pct !== null);
-  if (!hasData) return <span className="text-xs text-panel-muted">—</span>;
+  const values = series.map((d) => d.pct).filter((v) => v !== null && v !== undefined);
+  if (values.length === 0) return <span className="text-xs text-panel-muted">—</span>;
+  const withTarget = [...values, target].filter((v) => v !== undefined && v !== null);
+  const lo = Math.min(...withTarget);
+  const hi = Math.max(...withTarget);
+  const pad = Math.max(2, (hi - lo) * 0.15);
+  const domain = [Math.max(0, Math.floor(lo - pad)), Math.min(100, Math.ceil(hi + pad))];
   return (
-    <LineChart width={92} height={26} data={series} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+    <LineChart width={92} height={26} data={series} margin={{ top: 3, right: 2, left: 2, bottom: 3 }}>
+      <YAxis hide domain={domain} />
       <ReferenceLine y={target} stroke="#55554f" strokeWidth={1} strokeDasharray="2 2" />
-      <Line type="monotone" dataKey="pct" stroke="#f4f4f0" strokeWidth={1.25} dot={false} connectNulls isAnimationActive={false} />
+      <Line type="monotone" dataKey="pct" stroke="#f4f4f0" strokeWidth={1.5} dot={{ r: 1.5, fill: '#f4f4f0', strokeWidth: 0 }} connectNulls isAnimationActive={false} />
     </LineChart>
   );
 }

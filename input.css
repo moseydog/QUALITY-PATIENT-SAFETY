@@ -2,13 +2,13 @@
 @source "./client/src/**/*.{js,jsx}";
 
 @theme {
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-serif: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Manrope', system-ui, sans-serif;
+  --font-serif: 'Manrope', system-ui, sans-serif;
   --color-ink: #111110;
-  --color-paper: #d9d9d4;
-  --color-rule: #b8b8b2;
-  --color-surface: #c9c9c3;
-  --color-surface-2: #bebeb8;
+  --color-paper: #ffffff;
+  --color-rule: #e4e4e0;
+  --color-surface: #f4f4f1;
+  --color-surface-2: #ebebe7;
   --color-panel: #111110;
   --color-panel-2: #1c1c1a;
   --color-panel-text: #f4f4f0;
@@ -18,23 +18,23 @@
   --color-text-muted: #55554f;
   --color-text-dim: #83837c;
   --color-editorial: #111110;
-  --color-editorial-light: #c9c9c3;
+  --color-editorial-light: #f4f4f1;
   --color-falls-accent: #111110;
-  --color-falls-light: #c9c9c3;
+  --color-falls-light: #f4f4f1;
   --color-hapi-accent: #111110;
-  --color-hapi-light: #c9c9c3;
+  --color-hapi-light: #f4f4f1;
   --color-edu-accent: #111110;
-  --color-edu-light: #c9c9c3;
-  --color-status-good: #4f7d68;
-  --color-status-good-light: #dde5e0;
-  --color-status-warn: #93672f;
-  --color-status-warn-light: #e8e0d3;
-  --color-status-bad: #9c4a41;
-  --color-status-bad-light: #e6dad8;
+  --color-edu-light: #f4f4f1;
+  --color-status-good: #3c6e56;
+  --color-status-good-light: #e3ede8;
+  --color-status-warn: #8a5f28;
+  --color-status-warn-light: #f0e6d6;
+  --color-status-bad: #93392f;
+  --color-status-bad-light: #f2e2e0;
 }
 
 body {
-  background: #d9d9d4;
+  background: #ffffff;
 }
 
 input, select, textarea {

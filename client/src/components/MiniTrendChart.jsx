@@ -32,6 +32,12 @@ export default function MiniTrendChart({ metric, monthlyData, monthsToShow = 6 }
 
   const hasData = data.some((d) => d.pct !== null);
   const latest = [...data].reverse().find((d) => d.pct !== null);
+  const values = data.map((d) => d.pct).filter((v) => v !== null);
+  const withTarget = [...values, metric.target];
+  const lo = Math.min(...withTarget);
+  const hi = Math.max(...withTarget);
+  const pad = Math.max(3, (hi - lo) * 0.2);
+  const domain = [Math.max(0, Math.floor(lo - pad)), Math.min(100, Math.ceil(hi + pad))];
 
   return (
     <div className="bg-panel p-3">
@@ -44,9 +50,9 @@ export default function MiniTrendChart({ metric, monthlyData, monthsToShow = 6 }
       ) : (
         <div className="h-24">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 4, right: 6, left: -28, bottom: 0 }}>
+            <LineChart data={data} margin={{ top: 4, right: 6, left: -8, bottom: 0 }}>
               <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#8f8f89' }} axisLine={{ stroke: '#333330' }} tickLine={false} interval={0} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: '#8f8f89' }} width={26} axisLine={false} tickLine={false} ticks={[0, 50, 100]} />
+              <YAxis domain={domain} tick={{ fontSize: 9, fill: '#8f8f89' }} width={30} axisLine={false} tickLine={false} />
               <ReferenceLine y={metric.target} stroke="#55554f" strokeDasharray="3 3" strokeWidth={1} />
               <Tooltip content={<PanelTooltip />} />
               <Line type="monotone" dataKey="pct" stroke="#f4f4f0" strokeWidth={1.75} dot={{ r: 2, fill: '#f4f4f0', strokeWidth: 0 }} activeDot={{ r: 3 }} connectNulls isAnimationActive={false} />
@@ -54,7 +60,7 @@ export default function MiniTrendChart({ metric, monthlyData, monthsToShow = 6 }
           </ResponsiveContainer>
         </div>
       )}
-      <div className="text-[10px] text-panel-muted mt-1">Target {metric.target}%</div>
+      <div className="text-[10px] text-panel-muted mt-1">Target {metric.target}% · dashed line marks it</div>
     </div>
   );
 }

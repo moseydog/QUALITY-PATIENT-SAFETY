@@ -6,6 +6,14 @@ const { METRICS } = require('../metrics');
 const router = express.Router();
 router.use(requireAuth);
 
+// The program's audit tracking is only considered reliable/relevant within
+// this window; earlier pilot data and later stray entries are excluded from
+// every stats view and the visit list, though the underlying rows are left
+// in the database rather than deleted.
+const SCOPE_START = '2025-09';
+const SCOPE_END = '2026-04';
+const SCOPE_SQL = `substr(audit_date,1,7) BETWEEN '${SCOPE_START}' AND '${SCOPE_END}'`;
+
 function metricOrThrow(key) {
   const m = METRICS.find((x) => x.key === key);
   if (!m) throw new Error('Unknown metric');
@@ -20,7 +28,7 @@ function monthlyRows(metric) {
       SUM(CASE WHEN ${metric.key} = 'yes' THEN 1 ELSE 0 END) as compliant,
       COUNT(*) as total
     FROM audit_visits
-    WHERE ${metric.key} IS NOT NULL AND audit_date IS NOT NULL ${notInSql}
+    WHERE ${metric.key} IS NOT NULL AND audit_date IS NOT NULL AND ${SCOPE_SQL} ${notInSql}
     GROUP BY month ORDER BY month
   `;
   return db.prepare(sql).all(...metric.exclude);
@@ -68,7 +76,7 @@ router.get('/stats/trend/:key', (req, res) => {
       SUM(CASE WHEN ${metric.key} = 'yes' THEN 1 ELSE 0 END) as compliant,
       COUNT(*) as total
     FROM audit_visits
-    WHERE ${metric.key} IS NOT NULL AND audit_date IS NOT NULL AND location IS NOT NULL ${notInSql}
+    WHERE ${metric.key} IS NOT NULL AND audit_date IS NOT NULL AND location IS NOT NULL AND ${SCOPE_SQL} ${notInSql}
     GROUP BY month, location ORDER BY month
   `;
   const byLocRows = db.prepare(byLocSql).all(...metric.exclude);
@@ -100,35 +108,35 @@ router.get('/quality-check', requireRole('admin'), (req, res) => {
   const issues = [];
 
   const badBraden = db.prepare(
-    "SELECT id, audit_date, room_number, braden_score FROM audit_visits WHERE braden_score IS NOT NULL AND (braden_score < 6 OR braden_score > 23)"
+    `SELECT id, audit_date, room_number, braden_score FROM audit_visits WHERE braden_score IS NOT NULL AND (braden_score < 6 OR braden_score > 23) AND ${SCOPE_SQL}`
   ).all();
   badBraden.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Braden score out of range (valid: 6-23)', detail: String(r.braden_score) }));
 
   const badMorse = db.prepare(
-    "SELECT id, audit_date, room_number, morse_score FROM audit_visits WHERE morse_score IS NOT NULL AND (morse_score < 0 OR morse_score > 125)"
+    `SELECT id, audit_date, room_number, morse_score FROM audit_visits WHERE morse_score IS NOT NULL AND (morse_score < 0 OR morse_score > 125) AND ${SCOPE_SQL}`
   ).all();
   badMorse.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Morse score out of range (valid: 0-125)', detail: String(r.morse_score) }));
 
   const fallInconsistent = db.prepare(
     `SELECT id, audit_date, room_number FROM audit_visits
-     WHERE is_fall_risk = 'no' AND (morse_score IS NOT NULL OR fall_wristband IS NOT NULL OR bed_alarm_on IS NOT NULL)`
+     WHERE is_fall_risk = 'no' AND (morse_score IS NOT NULL OR fall_wristband IS NOT NULL OR bed_alarm_on IS NOT NULL) AND ${SCOPE_SQL}`
   ).all();
   fallInconsistent.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Marked not a fall risk, but fall equipment fields were filled in', detail: '' }));
 
   const hapiInconsistent = db.prepare(
     `SELECT id, audit_date, room_number FROM audit_visits
-     WHERE is_hapi_risk = 'no' AND (braden_score IS NOT NULL OR heels_offloaded IS NOT NULL OR primo_boots IS NOT NULL)`
+     WHERE is_hapi_risk = 'no' AND (braden_score IS NOT NULL OR heels_offloaded IS NOT NULL OR primo_boots IS NOT NULL) AND ${SCOPE_SQL}`
   ).all();
   hapiInconsistent.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Marked not a HAPI risk, but HAPI fields were filled in', detail: '' }));
 
   const wrongLocation = db.prepare(
-    "SELECT id, audit_date, room_number, location FROM audit_visits WHERE location = 'Ascension Seton Medical Center'"
+    `SELECT id, audit_date, room_number, location FROM audit_visits WHERE location = 'Ascension Seton Medical Center' AND ${SCOPE_SQL}`
   ).all();
   wrongLocation.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Location is Ascension Seton — no audits have actually happened there yet', detail: '' }));
 
   const duplicates = db.prepare(
     `SELECT audit_date, room_number, COUNT(*) as c FROM audit_visits
-     WHERE audit_date IS NOT NULL AND room_number IS NOT NULL AND room_number != ''
+     WHERE audit_date IS NOT NULL AND room_number IS NOT NULL AND room_number != '' AND ${SCOPE_SQL}
      GROUP BY audit_date, room_number HAVING c > 1`
   ).all();
   duplicates.forEach((r) => issues.push({ id: null, date: r.audit_date, room: r.room_number, type: `Possible duplicate — ${r.c} audits logged for this room on this date`, detail: '' }));
@@ -140,11 +148,11 @@ router.get('/', (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 50, 500);
   if (req.query.month) {
     const rows = db.prepare(
-      "SELECT * FROM audit_visits WHERE substr(audit_date,1,7) = ? ORDER BY audit_date DESC, id DESC LIMIT ?"
+      `SELECT * FROM audit_visits WHERE substr(audit_date,1,7) = ? AND ${SCOPE_SQL} ORDER BY audit_date DESC, id DESC LIMIT ?`
     ).all(req.query.month, limit);
     return res.json(rows);
   }
-  const rows = db.prepare('SELECT * FROM audit_visits ORDER BY audit_date DESC, id DESC LIMIT ?').all(limit);
+  const rows = db.prepare(`SELECT * FROM audit_visits WHERE ${SCOPE_SQL} ORDER BY audit_date DESC, id DESC LIMIT ?`).all(limit);
   res.json(rows);
 });
 

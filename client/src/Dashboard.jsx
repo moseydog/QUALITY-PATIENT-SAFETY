@@ -340,18 +340,18 @@ export default function Dashboard({ user, onLogout }) {
       <div className="max-w-6xl mx-auto p-5 md:p-8 space-y-8">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule pb-0">
           <div className="flex flex-wrap gap-1">
-            {['overview', 'fall', 'hapi', 'education'].map((tab) => (
+            {['overview', 'fall', 'hapi', 'education', 'audits'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => { setActiveTab(tab); setSelectedMetric(null); }}
                 className={`px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px ${
                   activeTab === tab
-                    ? (tab === 'overview' ? 'border-ink text-ink' : `${CATEGORY_META[tab].text}`)
+                    ? (tab === 'overview' || tab === 'audits' ? 'border-ink text-ink' : `${CATEGORY_META[tab].text}`)
                     : 'border-transparent text-text-dim hover:text-text-muted'
                 }`}
-                style={activeTab === tab && tab !== 'overview' ? { borderColor: 'currentColor' } : undefined}
+                style={activeTab === tab && tab !== 'overview' && tab !== 'audits' ? { borderColor: 'currentColor' } : undefined}
               >
-                {tab === 'overview' ? 'Overview' : CATEGORY_META[tab].label}
+                {tab === 'overview' ? 'Overview' : tab === 'audits' ? 'Audits' : CATEGORY_META[tab].label}
               </button>
             ))}
           </div>
@@ -484,51 +484,53 @@ export default function Dashboard({ user, onLogout }) {
               <h2 className="text-sm font-semibold text-ink mb-2">Needs attention</h2>
               <BelowTargetList list={belowTarget(catMetrics)} />
             </div>
+          </div>
+        )}
 
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-sm font-semibold text-ink">Individual audit visits</h2>
-                <select
-                  value={monthFilter}
-                  onChange={(e) => setMonthFilter(e.target.value)}
-                  className="text-xs border border-rule rounded px-2 py-1 text-text-muted"
-                >
-                  <option value="">Most recent 100</option>
-                  {allMonths.slice().reverse().map((mo) => <option key={mo} value={mo}>{formatMonth(mo)}</option>)}
-                </select>
-              </div>
-              <div className="bg-surface border-t-2 border-b border-ink overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-text-muted text-xs uppercase tracking-wide">
-                    <tr className="border-b border-ink">
-                      <th className="text-left px-3 py-2 font-medium">Date</th>
-                      <th className="text-left px-3 py-2 font-medium">Location</th>
-                      <th className="text-left px-3 py-2 font-medium">Room</th>
-                      <th className="text-left px-3 py-2 font-medium">Fall risk</th>
-                      <th className="text-left px-3 py-2 font-medium">HAPI risk</th>
-                      <th className="px-3 py-2"></th>
+        {activeTab === 'audits' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-ink">Individual audit visits</h2>
+              <select
+                value={monthFilter}
+                onChange={(e) => setMonthFilter(e.target.value)}
+                className="text-xs border border-rule rounded px-2 py-1 text-text-muted"
+              >
+                <option value="">Most recent 100</option>
+                {allMonths.slice().reverse().map((mo) => <option key={mo} value={mo}>{formatMonth(mo)}</option>)}
+              </select>
+            </div>
+            <div className="bg-surface border-t-2 border-b border-ink overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-text-muted text-xs uppercase tracking-wide">
+                  <tr className="border-b border-ink">
+                    <th className="text-left px-3 py-2 font-medium">Date</th>
+                    <th className="text-left px-3 py-2 font-medium">Location</th>
+                    <th className="text-left px-3 py-2 font-medium">Room</th>
+                    <th className="text-left px-3 py-2 font-medium">Fall risk</th>
+                    <th className="text-left px-3 py-2 font-medium">HAPI risk</th>
+                    <th className="px-3 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentVisits.map((v) => (
+                    <tr key={v.id} className="border-t border-rule">
+                      <td className="px-3 py-2 text-text-muted whitespace-nowrap">{v.audit_date || '—'}</td>
+                      <td className="px-3 py-2 text-text-muted whitespace-nowrap">{v.location || '—'}</td>
+                      <td className="px-3 py-2 text-text-muted">{v.room_number || '—'}</td>
+                      <td className="px-3 py-2 text-text-muted capitalize">{v.is_fall_risk || '—'}</td>
+                      <td className="px-3 py-2 text-text-muted capitalize">{v.is_hapi_risk || '—'}</td>
+                      <td className="px-3 py-2 text-right">
+                        {isAdmin && (
+                          <button onClick={() => handleDeleteVisit(v.id)} className="text-text-dim hover:text-status-bad">
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {recentVisits.map((v) => (
-                      <tr key={v.id} className="border-t border-rule">
-                        <td className="px-3 py-2 text-text-muted whitespace-nowrap">{v.audit_date || '—'}</td>
-                        <td className="px-3 py-2 text-text-muted whitespace-nowrap">{v.location || '—'}</td>
-                        <td className="px-3 py-2 text-text-muted">{v.room_number || '—'}</td>
-                        <td className="px-3 py-2 text-text-muted capitalize">{v.is_fall_risk || '—'}</td>
-                        <td className="px-3 py-2 text-text-muted capitalize">{v.is_hapi_risk || '—'}</td>
-                        <td className="px-3 py-2 text-right">
-                          {isAdmin && (
-                            <button onClick={() => handleDeleteVisit(v.id)} className="text-text-dim hover:text-status-bad">
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
