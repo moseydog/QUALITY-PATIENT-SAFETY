@@ -1,7 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 
 const COLORS = { yes: '#3d6690', no: '#a33a2e' };
+
+function insideLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }) {
+  if (percent < 0.06) return null; // too thin a sliver to label without crowding
+  const RADIAN = Math.PI / 180;
+  const r = innerRadius + (outerRadius - innerRadius) * 0.6;
+  const x = cx + r * Math.cos(-midAngle * RADIAN);
+  const y = cy + r * Math.sin(-midAngle * RADIAN);
+  return (
+    <text x={x} y={y} fill="#ffffff" fontSize={12} fontWeight={700} textAnchor="middle" dominantBaseline="central">
+      {Math.round(percent * 100)}%
+    </text>
+  );
+}
 
 function MiniPie({ compliant, total, tierLabel }) {
   if (total === 0) {
@@ -14,9 +27,9 @@ function MiniPie({ compliant, total, tierLabel }) {
   return (
     <div>
       <p className="text-[11px] text-text-muted text-center mb-1">{tierLabel}</p>
-      <PieChart width={150} height={130}>
-        <Pie data={data} dataKey="value" cx="50%" cy="50%" outerRadius={45} labelLine={false}
-          label={({ percent }) => `${Math.round(percent * 100)}%`}
+      <PieChart width={150} height={140} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+        <Pie data={data} dataKey="value" cx="50%" cy="50%" outerRadius={50} labelLine={false}
+          label={insideLabel}
           isAnimationActive={false}
         >
           <Cell fill={COLORS.yes} />

@@ -102,7 +102,7 @@ router.get('/stats/monthly-table', (req, res) => {
     const rows = monthlyRows(m);
     const byMonth = {};
     rows.forEach((r) => {
-      byMonth[r.month] = r.total > 0 ? Math.round((r.compliant / r.total) * 1000) / 10 : null;
+      byMonth[r.month] = { pct: Math.round((r.compliant / r.total) * 1000) / 10, compliant: r.compliant, total: r.total };
     });
     return { key: m.key, label: m.label, category: m.category, byMonth };
   });
@@ -213,6 +213,40 @@ router.get('/stats/stratified/:category', (req, res) => {
     });
 
   res.json({ latestMonth: latest, priorMonth: prior, tierLabels: spec.tiers.map((t) => t.label), metrics });
+});
+
+// Fall semester (Sep-Dec) vs Spring semester (Jan-Apr) comparison, since the
+// volunteer roster turns over on the academic calendar rather than by month.
+const SEMESTERS = [
+  { label: 'Fall 2025', months: ['2025-09', '2025-10', '2025-11', '2025-12'] },
+  { label: 'Spring 2026', months: ['2026-01', '2026-02', '2026-03', '2026-04'] },
+];
+
+router.get('/stats/semester/:category', (req, res) => {
+  const catMetrics = METRICS.filter((m) => m.category === req.params.category && !m.reference);
+  if (catMetrics.length === 0) return res.status(404).json({ error: 'Unknown category' });
+
+  const out = catMetrics.map((m) => {
+    const notInSql = m.exclude.length ? `AND ${m.key} NOT IN (${m.exclude.map(() => '?').join(',')})` : '';
+    const semesterStats = SEMESTERS.map((sem) => {
+      const placeholders = sem.months.map(() => '?').join(',');
+      const row = db.prepare(
+        `SELECT SUM(CASE WHEN ${m.key}='yes' THEN 1 ELSE 0 END) as compliant, COUNT(*) as total
+         FROM audit_visits WHERE substr(audit_date,1,7) IN (${placeholders}) AND ${m.key} IS NOT NULL ${notInSql}`
+      ).get(...sem.months, ...m.exclude);
+      return {
+        label: sem.label,
+        compliant: row.compliant || 0,
+        total: row.total || 0,
+        pct: row.total >= MIN_SAMPLE_SIZE ? Math.round((row.compliant / row.total) * 1000) / 10 : null,
+      };
+    });
+    const [fall, spring] = semesterStats;
+    const delta = fall.pct !== null && spring.pct !== null ? Math.round((spring.pct - fall.pct) * 10) / 10 : null;
+    return { key: m.key, label: m.label, target: m.target, semesters: semesterStats, delta };
+  });
+
+  res.json({ metrics: out });
 });
 
 router.get('/', (req, res) => {

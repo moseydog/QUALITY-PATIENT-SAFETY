@@ -8,10 +8,10 @@ import {
   AlertTriangle, ShieldCheck,
 } from 'lucide-react';
 import AddVisitModal from './components/AddVisitModal.jsx';
-import MonthlyTable from './components/MonthlyTable.jsx';
 import MiniTrendChart from './components/MiniTrendChart.jsx';
 import CategoryRunChart from './components/CategoryRunChart.jsx';
 import StratifiedFindings from './components/StratifiedFindings.jsx';
+import SemesterComparison from './components/SemesterComparison.jsx';
 
 const CATEGORY_META = {
   fall: { label: 'Fall Prevention', active: 'bg-falls-accent text-white', text: 'text-falls-accent', light: 'bg-falls-light' },
@@ -265,15 +265,24 @@ export default function Dashboard({ user, onLogout }) {
     return monthlyData.months.map((month) => {
       let totalWeight = 0;
       let weightedSum = 0;
+      let sampleTotal = 0;
+      let sampleCompliant = 0;
       catMetrics.forEach((m) => {
         const full = monthlyData.metrics.find((x) => x.key === m.key);
-        const pct = full ? full.byMonth[month] : undefined;
-        if (pct !== undefined && pct !== null) {
+        const cell = full ? full.byMonth[month] : undefined;
+        if (cell) {
           totalWeight += m.weight;
-          weightedSum += pct * m.weight;
+          weightedSum += cell.pct * m.weight;
+          sampleTotal += cell.total;
+          sampleCompliant += cell.compliant;
         }
       });
-      return { month, pct: totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) / 10 : null };
+      return {
+        month,
+        pct: totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) / 10 : null,
+        total: sampleTotal,
+        compliant: sampleCompliant,
+      };
     });
   }
 
@@ -404,10 +413,6 @@ export default function Dashboard({ user, onLogout }) {
               <h2 className="text-sm font-semibold text-ink mb-2">Needs attention</h2>
               <BelowTargetList list={belowTarget(withStatus).slice(0, 6)} />
             </div>
-            <div>
-              <h2 className="text-sm font-semibold text-ink mb-2">Month-by-month progression, last 6 months (% compliant)</h2>
-              <MonthlyTable data={monthlyData} targets={Object.fromEntries(withStatus.map((m) => [m.key, m.target]))} />
-            </div>
           </div>
         )}
 
@@ -448,10 +453,10 @@ export default function Dashboard({ user, onLogout }) {
                 ) : (
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={trendChartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                      <LineChart data={trendChartData} margin={{ top: 5, right: 16, left: 4, bottom: 0 }}>
                         <CartesianGrid stroke="#d7dce1" strokeDasharray="0" vertical={false} />
                         <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#52626e' }} axisLine={{ stroke: '#d7dce1' }} tickLine={false} />
-                        <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#52626e' }} axisLine={false} tickLine={false} ticks={[0, 25, 50, 75, 100]} />
+                        <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#52626e' }} width={36} axisLine={false} tickLine={false} ticks={[0, 25, 50, 75, 100]} />
                         <Tooltip contentStyle={{ fontSize: 12, border: '1px solid #d7dce1', borderRadius: 2, background: '#ffffff', color: '#12283b' }} />
                         <Legend wrapperStyle={{ fontSize: 11, color: '#52626e' }} iconType="plainline" />
                         <ReferenceLine y={detailMetric.target} stroke="#52626e" strokeDasharray="4 3" strokeWidth={1.25} />
@@ -477,6 +482,8 @@ export default function Dashboard({ user, onLogout }) {
             {(activeTab === 'fall' || activeTab === 'hapi') && (
               <StratifiedFindings category={activeTab} riskLabel={activeTab === 'hapi' ? 'Braden score' : 'Morse score'} />
             )}
+
+            <SemesterComparison category={activeTab} />
           </div>
         )}
 
