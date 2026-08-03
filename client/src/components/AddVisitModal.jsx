@@ -1,8 +1,64 @@
-import React, { useState } from 'react';
-import { X, Info } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, Info, AlertTriangle } from 'lucide-react';
 
 const YES_NO = [['', 'Select...'], ['yes', 'Yes'], ['no', 'No']];
 const YES_NO_NA = [...YES_NO, ['not_applicable', 'Not applicable']];
+
+// Real, confirmed unit layout - checked directly against 3,095 historical
+// audits: every real room number fell inside these ranges except 4 isolated
+// single-occurrence outliers, each almost certainly its own data-entry typo.
+const UNITS = [
+  { name: 'SICU', min: 201, max: 230 },
+  { name: 'MICU', min: 301, max: 330 },
+  { name: '4EW', min: 401, max: 430 },
+  { name: '4NS', min: 450, max: 479 },
+  { name: '5NCC', min: 501, max: 530 },
+  { name: '5NS', min: 550, max: 579 },
+  { name: '6NS', min: 650, max: 679 },
+  { name: '7NS', min: 750, max: 779 },
+];
+function unitForRoom(room) {
+  const n = Number(room);
+  if (!Number.isInteger(n)) return null;
+  const u = UNITS.find((u) => n >= u.min && n <= u.max);
+  return u ? u.name : null;
+}
+
+// Hard-blocking checks: these disable Save outright, since each is either a
+// room number that cannot exist in this hospital's layout, or a score value
+// that is clinically impossible - not a judgment call, a fact. Catches the
+// specific, recurring mistake of a Braden or Morse score ending up in the
+// room number field (or vice versa). Deterministic rules, not a model call:
+// the signal is a plain range/match check, so there's nothing here that
+// benefits from an LLM's judgment, and a fixed rule is faster, free, and
+// can't judge the same input differently on different days.
+function validateForm(form) {
+  const errors = [];
+  const warnings = [];
+  const room = form.room_number.trim();
+  const roomIsNumeric = /^\d+$/.test(room);
+  const braden = form.braden_score !== '' ? Number(form.braden_score) : null;
+  const morse = form.morse_score !== '' ? Number(form.morse_score) : null;
+
+  if (room && roomIsNumeric && !unitForRoom(room)) {
+    errors.push(`Room ${room} doesn't fall within any known unit's room range (SICU 201-230, MICU 301-330, 4EW 401-430, 4NS 450-479, 5NCC 501-530, 5NS 550-579, 6NS 650-679, 7NS 750-779). Double-check the room number.`);
+  }
+  if (braden !== null && (braden < 6 || braden > 23)) {
+    errors.push(`Braden score ${braden} is outside the only clinically valid range (6-23) — this is very likely a room number entered in the wrong field.`);
+  }
+  if (morse !== null && (morse < 0 || morse > 125)) {
+    errors.push(`Morse score ${morse} is outside the only clinically valid range (0-125) — this is very likely a room number entered in the wrong field.`);
+  }
+
+  if (roomIsNumeric && braden !== null && room === String(braden)) {
+    warnings.push(`Room number "${room}" exactly matches the Braden score entered — double-check these two fields weren't swapped.`);
+  } else if (roomIsNumeric && morse !== null && room === String(morse)) {
+    warnings.push(`Room number "${room}" exactly matches the Morse score entered — double-check these two fields weren't swapped.`);
+  }
+
+  return { errors, warnings };
+}
+
 const YES_NO_UNABLE = [...YES_NO, ['unable_to_assess', 'Unable to assess']];
 const YES_NO_NA_UNABLE = [...YES_NO, ['not_applicable', 'Not applicable'], ['unable_to_assess', 'Unable to assess']];
 
@@ -84,8 +140,11 @@ export default function AddVisitModal({ onClose, onSave, error }) {
   const [checking, setChecking] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const set = (key) => (val) => { setForm((f) => ({ ...f, [key]: val })); setChecked(false); };
+  const { errors: formErrors, warnings: swapWarnings } = useMemo(() => validateForm(form), [form.room_number, form.braden_score, form.morse_score]);
+  const needsConfirm = duplicateCount > 0 || swapWarnings.length > 0;
 
   async function handleSaveClick() {
+    if (formErrors.length > 0) return; // hard block - cannot be overridden
     if (!checked) {
       setChecking(true);
       try {
@@ -242,6 +301,16 @@ export default function AddVisitModal({ onClose, onSave, error }) {
           </p>
         </div>
         <div className="px-6 py-4 border-t border-rule space-y-2">
+          {formErrors.map((w, i) => (
+            <div key={`err-${i}`} className="bg-status-bad-light border border-status-bad rounded px-3 py-2 text-xs text-status-bad flex items-start gap-1.5 font-medium">
+              <AlertTriangle size={13} className="mt-0.5 flex-shrink-0" /> {w}
+            </div>
+          ))}
+          {checked && swapWarnings.map((w, i) => (
+            <div key={`warn-${i}`} className="bg-status-bad-light border border-rule rounded px-3 py-2 text-xs text-status-bad flex items-start gap-1.5">
+              <AlertTriangle size={13} className="mt-0.5 flex-shrink-0" /> {w}
+            </div>
+          ))}
           {checked && duplicateCount > 0 && (
             <div className="bg-status-warn-light border border-rule rounded px-3 py-2 text-xs text-status-warn">
               {duplicateCount} audit{duplicateCount === 1 ? ' is' : 's are'} already logged for room {form.room_number || '(blank)'} on {form.audit_date}. Double-check the room number and date before saving — if this really is a second, separate visit, click Save again to confirm.
@@ -249,10 +318,10 @@ export default function AddVisitModal({ onClose, onSave, error }) {
           )}
           <button
             onClick={handleSaveClick}
-            disabled={checking || submitting || !form.audit_date || !form.room_number.trim()}
+            disabled={checking || submitting || !form.audit_date || !form.room_number.trim() || formErrors.length > 0}
             className="w-full bg-ink text-paper rounded py-2 text-sm font-medium disabled:opacity-50"
           >
-            {checking ? 'Checking…' : submitting ? 'Saving…' : (checked && duplicateCount > 0) ? 'Save anyway' : 'Save visit'}
+            {checking ? 'Checking…' : submitting ? 'Saving…' : formErrors.length > 0 ? 'Fix errors above to save' : (checked && needsConfirm) ? 'Save anyway' : 'Save visit'}
           </button>
         </div>
       </div>

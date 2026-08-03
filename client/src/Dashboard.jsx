@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import AddVisitModal from './components/AddVisitModal.jsx';
 import SemesterMonthChart from './components/SemesterMonthChart.jsx';
+import UnitsTab from './components/UnitsTab.jsx';
 import StratifiedFindings from './components/StratifiedFindings.jsx';
 
 const CATEGORY_META = {
@@ -119,6 +120,7 @@ export default function Dashboard({ user, onLogout }) {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showQuality, setShowQuality] = useState(false);
   const [qualityIssues, setQualityIssues] = useState(null);
+  const [qualityCounts, setQualityCounts] = useState(null);
   const [monthlyData, setMonthlyData] = useState(null);
 
   const [userError, setUserError] = useState(null);
@@ -142,6 +144,7 @@ export default function Dashboard({ user, onLogout }) {
     if (!isAdmin) return;
     const data = await api('/api/visits/quality-check');
     setQualityIssues(data.issues);
+    setQualityCounts(data.counts);
   }
 
   useEffect(() => {
@@ -352,7 +355,7 @@ export default function Dashboard({ user, onLogout }) {
         </div>
         <nav className="flex-1 p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-panel-muted px-2 mb-1.5">Navigation</p>
-          {['overview', 'fall', 'hapi', 'education', 'audits'].map((tab) => (
+          {['overview', 'fall', 'hapi', 'education', 'units', 'audits'].map((tab) => (
             <button
               key={tab}
               onClick={() => { setActiveTab(tab); setSelectedMetric(null); }}
@@ -360,7 +363,7 @@ export default function Dashboard({ user, onLogout }) {
                 activeTab === tab ? 'bg-panel-2 text-panel-text' : 'text-panel-muted hover:bg-panel-2 hover:text-panel-text'
               }`}
             >
-              {tab === 'overview' ? 'Overview' : tab === 'audits' ? 'Audits' : CATEGORY_META[tab].label}
+              {tab === 'overview' ? 'Overview' : tab === 'audits' ? 'Audits' : tab === 'units' ? 'Units' : CATEGORY_META[tab].label}
             </button>
           ))}
           <button onClick={() => setShowAddVisit(true)} className="w-full mt-4 px-2.5 py-2 rounded text-sm font-semibold bg-panel-text text-panel flex items-center gap-1.5 justify-center">
@@ -460,7 +463,7 @@ export default function Dashboard({ user, onLogout }) {
 
             {activeTab === 'education' && (
               <p className="text-sm text-text-muted">
-                Each question below tests what patients themselves could tell a volunteer — what a pressure injury is, its risk factors, where it occurs, and how to prevent it — not whether staff had already covered it. Kept simple on purpose: no targets or "needs attention" list here, since a knowledge check like this is hard to hold to a fixed compliance bar the way equipment presence is.
+                Patient knowledge of pressure injuries — definition, risk factors, anatomical distribution, and prevention strategies — was assessed directly by volunteers through patient self-report, independent of any prior staff-delivered education. No fixed compliance target is applied to this domain, given the inherent variability of knowledge-based assessment relative to equipment-presence measures.
               </p>
             )}
 
@@ -547,6 +550,8 @@ export default function Dashboard({ user, onLogout }) {
           </div>
         )}
 
+        {activeTab === 'units' && <UnitsTab />}
+
         {activeTab === 'audits' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -609,8 +614,16 @@ export default function Dashboard({ user, onLogout }) {
               <button onClick={() => setShowQuality(false)}><X size={18} className="text-text-dim" /></button>
             </div>
             <p className="text-xs text-text-muted mb-3">
-              Rule-based checks against the current data: implausible scores, answers that contradict a stated risk level, and possible duplicate entries. This flags rows worth a human look — it can't independently confirm what actually happened in a room, only that something about the entry looks inconsistent.
+              Rule-based checks against the current data: implausible scores, likely swapped room-number/score fields, answers that contradict a stated risk level, and possible duplicate entries. This flags rows worth a human look — it can't independently confirm what actually happened in a room, only that something about the entry looks inconsistent.
             </p>
+            {qualityCounts && (
+              <div className="bg-surface-2 border border-rule rounded px-3 py-2 mb-3 text-xs text-text-muted flex flex-wrap gap-x-4 gap-y-1">
+                <span><strong className="text-ink">{qualityCounts.totalInDatabase}</strong> total audits in the database</span>
+                <span><strong className="text-ink">{qualityCounts.inScope}</strong> in the analyzed range ({qualityCounts.scopeRange})</span>
+                <span><strong className="text-ink">{qualityCounts.outOfScope}</strong> excluded as out of range</span>
+                <span>months need <strong className="text-ink">{qualityCounts.minSampleSize}+</strong> audits to be shown</span>
+              </div>
+            )}
             <div className="overflow-y-auto flex-1 space-y-2">
               {qualityIssues === null ? (
                 <p className="text-sm text-text-dim">Checking…</p>

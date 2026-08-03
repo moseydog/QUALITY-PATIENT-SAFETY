@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const { requireAuth, requireRole } = require('../middleware');
 const { METRICS } = require('../metrics');
+const { UNITS, unitForRoom } = require('../units');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -125,6 +126,27 @@ router.get('/quality-check', requireRole('admin'), (req, res) => {
   ).all();
   badMorse.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Morse score out of range (valid: 0-125)', detail: String(r.morse_score) }));
 
+  // Precise field-swap signal: the score in this row exactly equals the room
+  // number typed for it. Room numbers here run 3 digits; a 1-2 digit "room"
+  // that's identical to the Braden or Morse score is very likely the two
+  // fields getting swapped during entry, not a coincidence.
+  const swappedBraden = db.prepare(
+    `SELECT id, audit_date, room_number, braden_score FROM audit_visits
+     WHERE braden_score IS NOT NULL AND room_number = CAST(braden_score AS TEXT) AND LENGTH(room_number) <= 2 AND ${SCOPE_SQL}`
+  ).all();
+  swappedBraden.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Likely field swap: room number exactly matches the Braden score', detail: String(r.braden_score) }));
+
+  const swappedMorse = db.prepare(
+    `SELECT id, audit_date, room_number, morse_score FROM audit_visits
+     WHERE morse_score IS NOT NULL AND room_number = CAST(morse_score AS TEXT) AND LENGTH(room_number) <= 2 AND ${SCOPE_SQL}`
+  ).all();
+  swappedMorse.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Likely field swap: room number exactly matches the Morse score', detail: String(r.morse_score) }));
+
+  const allRoomed = db.prepare(
+    `SELECT id, audit_date, room_number FROM audit_visits WHERE room_number IS NOT NULL AND room_number GLOB '[0-9]*' AND ${SCOPE_SQL}`
+  ).all();
+  allRoomed.filter((r) => !unitForRoom(r.room_number)).forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: "Room number doesn't fall within any known unit's range — likely a typo", detail: '' }));
+
   const fallInconsistent = db.prepare(
     `SELECT id, audit_date, room_number FROM audit_visits
      WHERE is_fall_risk = 'no' AND (morse_score IS NOT NULL OR fall_wristband IS NOT NULL OR bed_alarm_on IS NOT NULL) AND ${SCOPE_SQL}`
@@ -149,7 +171,18 @@ router.get('/quality-check', requireRole('admin'), (req, res) => {
   ).all();
   duplicates.forEach((r) => issues.push({ id: null, date: r.audit_date, room: r.room_number, type: `Possible duplicate — ${r.c} audits logged for this room on this date`, detail: '' }));
 
-  res.json({ count: issues.length, issues });
+  const totalAll = db.prepare('SELECT COUNT(*) as c FROM audit_visits').get().c;
+  const totalInScope = db.prepare(`SELECT COUNT(*) as c FROM audit_visits WHERE ${SCOPE_SQL}`).get().c;
+  const totalOutOfScope = totalAll - totalInScope;
+  const counts = {
+    totalInDatabase: totalAll,
+    inScope: totalInScope,
+    outOfScope: totalOutOfScope,
+    scopeRange: `${SCOPE_START} to ${SCOPE_END}`,
+    minSampleSize: MIN_SAMPLE_SIZE,
+  };
+
+  res.json({ count: issues.length, issues, counts });
 });
 
 // Risk-stratified snapshot for the most recent in-scope month, mirroring the
@@ -249,6 +282,51 @@ router.get('/stats/semester/:category', (req, res) => {
   res.json({ metrics: out });
 });
 
+router.get('/stats/by-unit', (req, res) => {
+  const metricKeys = METRICS.filter((m) => !m.reference).map((m) => m.key);
+  const cols = ['room_number', 'braden_score', 'morse_score', ...metricKeys].join(', ');
+  const rows = db.prepare(`SELECT ${cols} FROM audit_visits WHERE room_number IS NOT NULL AND ${SCOPE_SQL}`).all();
+
+  const byUnit = {};
+  UNITS.forEach((u) => { byUnit[u.name] = { rows: [], bradenSum: 0, bradenN: 0 }; });
+
+  rows.forEach((r) => {
+    const unit = unitForRoom(r.room_number);
+    if (!unit) return; // room number doesn't fall in any known unit range
+    byUnit[unit].rows.push(r);
+    if (r.braden_score !== null && r.braden_score >= 6 && r.braden_score <= 23) {
+      byUnit[unit].bradenSum += r.braden_score;
+      byUnit[unit].bradenN += 1;
+    }
+  });
+
+  const out = UNITS.map((u) => {
+    const bucket = byUnit[u.name];
+    const totalAudits = bucket.rows.length;
+    const avgBraden = bucket.bradenN > 0 ? Math.round((bucket.bradenSum / bucket.bradenN) * 10) / 10 : null;
+
+    const categoryScores = {};
+    ['fall', 'hapi', 'education'].forEach((cat) => {
+      const catMetrics = METRICS.filter((m) => m.category === cat && !m.reference);
+      let totalWeight = 0;
+      let weightedSum = 0;
+      catMetrics.forEach((m) => {
+        const answered = bucket.rows.filter((r) => r[m.key] !== null && !m.exclude.includes(r[m.key]));
+        const compliant = answered.filter((r) => r[m.key] === 'yes').length;
+        if (answered.length >= MIN_SAMPLE_SIZE) {
+          totalWeight += m.weight;
+          weightedSum += (compliant / answered.length) * 100 * m.weight;
+        }
+      });
+      categoryScores[cat] = totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) / 10 : null;
+    });
+
+    return { unit: u.name, roomRange: `${u.min}-${u.max}`, totalAudits, avgBraden, ...categoryScores };
+  });
+
+  res.json({ units: out, scopeRange: `${SCOPE_START} to ${SCOPE_END}`, minSampleSize: MIN_SAMPLE_SIZE });
+});
+
 router.get('/', (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 50, 500);
   if (req.query.month) {
@@ -283,6 +361,17 @@ router.post('/', (req, res) => {
     'knows_pi_prevention', 'already_educated_today', 'patient_refused_education',
   ];
   if (!b.audit_date) return res.status(400).json({ error: 'Audit date is required' });
+  if (b.room_number && /^\d+$/.test(String(b.room_number)) && !unitForRoom(b.room_number)) {
+    return res.status(400).json({ error: `Room ${b.room_number} doesn't fall within any known unit's room range.` });
+  }
+  if (b.braden_score !== undefined && b.braden_score !== null && b.braden_score !== '') {
+    const bs = Number(b.braden_score);
+    if (bs < 6 || bs > 23) return res.status(400).json({ error: `Braden score ${bs} is outside the valid range (6-23).` });
+  }
+  if (b.morse_score !== undefined && b.morse_score !== null && b.morse_score !== '') {
+    const ms = Number(b.morse_score);
+    if (ms < 0 || ms > 125) return res.status(400).json({ error: `Morse score ${ms} is outside the valid range (0-125).` });
+  }
 
   const values = cols.map((c) => (b[c] === undefined || b[c] === '' ? null : b[c]));
   const placeholders = cols.map(() => '?').join(',');
