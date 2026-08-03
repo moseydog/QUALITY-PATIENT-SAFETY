@@ -288,7 +288,7 @@ router.get('/stats/by-unit', (req, res) => {
   const rows = db.prepare(`SELECT ${cols} FROM audit_visits WHERE room_number IS NOT NULL AND ${SCOPE_SQL}`).all();
 
   const byUnit = {};
-  UNITS.forEach((u) => { byUnit[u.name] = { rows: [], bradenSum: 0, bradenN: 0 }; });
+  UNITS.forEach((u) => { byUnit[u.name] = { rows: [], bradenSum: 0, bradenN: 0, morseSum: 0, morseN: 0 }; });
 
   rows.forEach((r) => {
     const unit = unitForRoom(r.room_number);
@@ -298,15 +298,20 @@ router.get('/stats/by-unit', (req, res) => {
       byUnit[unit].bradenSum += r.braden_score;
       byUnit[unit].bradenN += 1;
     }
+    if (r.morse_score !== null && r.morse_score >= 0 && r.morse_score <= 125) {
+      byUnit[unit].morseSum += r.morse_score;
+      byUnit[unit].morseN += 1;
+    }
   });
 
   const out = UNITS.map((u) => {
     const bucket = byUnit[u.name];
     const totalAudits = bucket.rows.length;
     const avgBraden = bucket.bradenN > 0 ? Math.round((bucket.bradenSum / bucket.bradenN) * 10) / 10 : null;
+    const avgMorse = bucket.morseN > 0 ? Math.round((bucket.morseSum / bucket.morseN) * 10) / 10 : null;
 
     const categoryScores = {};
-    ['fall', 'hapi', 'education'].forEach((cat) => {
+    ['fall', 'hapi'].forEach((cat) => {
       const catMetrics = METRICS.filter((m) => m.category === cat && !m.reference);
       let totalWeight = 0;
       let weightedSum = 0;
@@ -321,10 +326,69 @@ router.get('/stats/by-unit', (req, res) => {
       categoryScores[cat] = totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) / 10 : null;
     });
 
-    return { unit: u.name, roomRange: `${u.min}-${u.max}`, totalAudits, avgBraden, ...categoryScores };
+    return { unit: u.name, roomRange: `${u.min}-${u.max}`, totalAudits, avgBraden, avgMorse, ...categoryScores };
   });
 
   res.json({ units: out, scopeRange: `${SCOPE_START} to ${SCOPE_END}`, minSampleSize: MIN_SAMPLE_SIZE });
+});
+
+router.get('/stats/by-unit/:unit/monthly', (req, res) => {
+  const unit = UNITS.find((u) => u.name === req.params.unit);
+  if (!unit) return res.status(404).json({ error: 'Unknown unit' });
+
+  function unitMonthlyRows(metric) {
+    const notInSql = metric.exclude.length ? `AND ${metric.key} NOT IN (${metric.exclude.map(() => '?').join(',')})` : '';
+    const sql = `
+      SELECT substr(audit_date,1,7) as month,
+        SUM(CASE WHEN ${metric.key} = 'yes' THEN 1 ELSE 0 END) as compliant,
+        COUNT(*) as total
+      FROM audit_visits
+      WHERE ${metric.key} IS NOT NULL AND audit_date IS NOT NULL AND ${SCOPE_SQL}
+        AND CAST(room_number AS INTEGER) BETWEEN ? AND ? ${notInSql}
+      GROUP BY month HAVING total >= ${MIN_SAMPLE_SIZE} ORDER BY month
+    `;
+    return db.prepare(sql).all(unit.min, unit.max, ...metric.exclude);
+  }
+
+  const allMonths = db.prepare(`SELECT DISTINCT substr(audit_date,1,7) as month FROM audit_visits WHERE audit_date IS NOT NULL AND ${SCOPE_SQL} ORDER BY month`).all().map((r) => r.month);
+
+  const categories = {};
+  const targets = {};
+  ['fall', 'hapi'].forEach((cat) => {
+    const catMetrics = METRICS.filter((m) => m.category === cat && !m.reference);
+    const totalWeight = catMetrics.reduce((s, m) => s + m.weight, 0);
+    targets[cat] = totalWeight > 0 ? Math.round(catMetrics.reduce((s, m) => s + m.target * m.weight, 0) / totalWeight) : 85;
+    const perMetricByMonth = {};
+    catMetrics.forEach((m) => {
+      perMetricByMonth[m.key] = {};
+      unitMonthlyRows(m).forEach((r) => { perMetricByMonth[m.key][r.month] = { compliant: r.compliant, total: r.total }; });
+    });
+    const series = allMonths.map((month) => {
+      let totalWeight = 0;
+      let weightedSum = 0;
+      let sampleTotal = 0;
+      let sampleCompliant = 0;
+      catMetrics.forEach((m) => {
+        const cell = perMetricByMonth[m.key][month];
+        if (cell) {
+          const pct = (cell.compliant / cell.total) * 100;
+          totalWeight += m.weight;
+          weightedSum += pct * m.weight;
+          sampleTotal += cell.total;
+          sampleCompliant += cell.compliant;
+        }
+      });
+      return {
+        month,
+        pct: totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) / 10 : null,
+        total: sampleTotal,
+        compliant: sampleCompliant,
+      };
+    });
+    categories[cat] = series;
+  });
+
+  res.json({ unit: unit.name, roomRange: `${unit.min}-${unit.max}`, categories, targets });
 });
 
 router.get('/', (req, res) => {
