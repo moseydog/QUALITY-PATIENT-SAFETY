@@ -34,8 +34,8 @@ volunteer/admin logins, and 3,095 historical audits already loaded in.
 - **Target thresholds** (admin) — editable per metric; defaults are common
   QI benchmarks, adjust to your hospital's actual goals.
 - Location is only recorded for about half of all audits (it looks like the
-  question was added to the form partway through the year) — Dell Seton has
-  substantial data, Ascension Seton has just a handful of visits so far.
+  question was added to the form partway through the year). Hospital #1 has
+  all the real audit data; Hospital #2 hasn't started being audited yet.
   Trend charts show the overall line always, and per-location lines only
   where that data exists.
 

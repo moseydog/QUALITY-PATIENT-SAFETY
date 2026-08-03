@@ -138,9 +138,9 @@ router.get('/quality-check', requireRole('admin'), (req, res) => {
   hapiInconsistent.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Marked not a HAPI risk, but HAPI fields were filled in', detail: '' }));
 
   const wrongLocation = db.prepare(
-    `SELECT id, audit_date, room_number, location FROM audit_visits WHERE location = 'Ascension Seton Medical Center' AND ${SCOPE_SQL}`
+    `SELECT id, audit_date, room_number, location FROM audit_visits WHERE location = 'Hospital #2' AND ${SCOPE_SQL}`
   ).all();
-  wrongLocation.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Location is Ascension Seton — no audits have actually happened there yet', detail: '' }));
+  wrongLocation.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Location is Hospital #2 — no audits have actually happened there yet', detail: '' }));
 
   const duplicates = db.prepare(
     `SELECT audit_date, room_number, COUNT(*) as c FROM audit_visits

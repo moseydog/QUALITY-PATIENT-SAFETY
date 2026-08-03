@@ -65,7 +65,7 @@ function ScriptBlock({ title, children }) {
 
 const initialForm = {
   audit_date: new Date().toISOString().slice(0, 10),
-  location: 'Dell Seton Medical Center', room_number: '',
+  location: 'Hospital #1', room_number: '',
   is_fall_risk: '', morse_score: '', tips_board_correct: '', bed_alarm_on: '',
   bed_alarm_cord_plugged: '', call_light_reach: '', fall_wristband: '', non_slip_socks: '',
   gait_belt_present: '', walker_present: '', posey_alarm_present: '', posey_alarm_charged: '',
@@ -133,7 +133,7 @@ export default function AddVisitModal({ onClose, onSave, error }) {
           </div>
               <div className="bg-surface-2 border border-rule rounded-lg p-3">
                 <label className="text-sm text-ink font-medium">Location</label>
-                <p className="text-sm text-text-muted mt-1">Dell Seton Medical Center</p>
+                <p className="text-sm text-text-muted mt-1">Hospital #1</p>
                 <p className="text-xs text-text-dim mt-1">The only site currently being audited — ask an admin to re-enable a location choice once a second site starts.</p>
               </div>
 

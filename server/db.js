@@ -113,8 +113,16 @@ db.exec(`
 // nothing matches.
 const CORRECTIONS = [
   {
-    label: 'Ascension Seton rows relabeled to Dell Seton (no audits have happened at Ascension yet)',
+    label: 'Ascension Seton rows relabeled to Hospital #1 (no audits have happened at that second site yet)',
     sql: "UPDATE audit_visits SET location = 'Dell Seton Medical Center' WHERE location = 'Ascension Seton Medical Center'",
+  },
+  {
+    label: 'Hospital name anonymized: Dell Seton Medical Center -> Hospital #1',
+    sql: "UPDATE audit_visits SET location = 'Hospital #1' WHERE location = 'Dell Seton Medical Center'",
+  },
+  {
+    label: 'Hospital name anonymized: Ascension Seton Medical Center -> Hospital #2',
+    sql: "UPDATE audit_visits SET location = 'Hospital #2' WHERE location = 'Ascension Seton Medical Center'",
   },
 ];
 CORRECTIONS.forEach(({ label, sql }) => {

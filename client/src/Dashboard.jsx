@@ -12,13 +12,13 @@ import SemesterMonthChart from './components/SemesterMonthChart.jsx';
 import StratifiedFindings from './components/StratifiedFindings.jsx';
 
 const CATEGORY_META = {
-  fall: { label: 'Fall Prevention', active: 'bg-falls-accent text-white', text: 'text-falls-accent', light: 'bg-falls-light' },
+  fall: { label: 'Falls Prevention', active: 'bg-falls-accent text-white', text: 'text-falls-accent', light: 'bg-falls-light' },
   hapi: { label: 'HAPI Prevention', active: 'bg-hapi-accent text-white', text: 'text-hapi-accent', light: 'bg-hapi-light' },
   education: { label: 'Patient Education', active: 'bg-edu-accent text-white', text: 'text-edu-accent', light: 'bg-edu-light' },
 };
 
 const statusBar = { green: 'bg-status-good', warn: 'bg-status-warn', red: 'bg-status-bad', gray: 'bg-rule' };
-const LOCATION_COLORS = { 'Dell Seton Medical Center': '#f2f2f0', 'Ascension Seton Medical Center': '#8a8a86' };
+const LOCATION_COLORS = { 'Hospital #1': '#f2f2f0', 'Hospital #2': '#8a8a86' };
 const FALL_MONTHS = ['2025-09', '2025-10', '2025-11', '2025-12'];
 const SPRING_MONTHS = ['2026-01', '2026-02', '2026-03', '2026-04'];
 
@@ -27,6 +27,15 @@ function getStatus(pct, target) {
   if (pct >= target) return 'green';
   if (pct >= target - 10) return 'warn';
   return 'red';
+}
+
+// Absolute compliance-score coloring (not relative to each metric's own
+// target): >75% green, 50-75% yellow, <50% red.
+function scoreColorClass(pct) {
+  if (pct === null || pct === undefined) return 'text-ink';
+  if (pct > 75) return 'text-status-good';
+  if (pct >= 50) return 'text-status-warn';
+  return 'text-status-bad';
 }
 
 function formatMonth(ym) {
@@ -55,7 +64,7 @@ function MetricCard({ metric, selected, onClick }) {
         {metric.reference && <span className="text-[9px] font-semibold uppercase tracking-wide bg-surface-2 text-text-dim px-1.5 py-0.5 rounded-full flex-shrink-0">Reference</span>}
       </div>
       <div className="flex items-end justify-between">
-        <span className="font-serif text-3xl font-semibold text-ink">{latestPct !== null ? `${Math.round(latestPct)}%` : '—'}</span>
+        <span className={`font-serif text-3xl font-semibold ${scoreColorClass(latestPct)}`}>{latestPct !== null ? `${Math.round(latestPct)}%` : '—'}</span>
         {delta !== null && Math.abs(delta) >= 0.5 && (
           <span className={`flex items-center gap-0.5 text-xs font-medium ${delta > 0 ? 'text-status-good' : 'text-status-bad'}`}>
             {delta > 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
@@ -338,7 +347,7 @@ export default function Dashboard({ user, onLogout }) {
         <div className="p-5 border-b border-panel-rule">
           <span className="bg-panel-text text-panel text-xs font-bold px-2 py-1 rounded">QPS</span>
           <h1 className="text-sm font-semibold mt-2.5 leading-snug">Quality and Patient Safety Volunteer Program</h1>
-          <p className="text-[11px] text-panel-muted mt-1">Dell Seton Medical Center</p>
+          <p className="text-[11px] text-panel-muted mt-1">Hospital #1</p>
         </div>
         <nav className="flex-1 p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-panel-muted px-2 mb-1.5">Navigation</p>
@@ -395,7 +404,7 @@ export default function Dashboard({ user, onLogout }) {
                   <button key={cat} onClick={() => setActiveTab(cat)}
                     className="text-left p-5 bg-surface border border-rule hover:border-text-dim transition">
                     <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${CATEGORY_META[cat].text}`}>{CATEGORY_META[cat].label}</div>
-                    <div className="text-4xl font-bold text-ink">{avg !== null ? `${avg}%` : '—'}</div>
+                    <div className={`text-4xl font-bold ${scoreColorClass(avg)}`}>{avg !== null ? `${avg}%` : '—'}</div>
                     <div className="text-xs text-text-dim mt-1">weighted average, {countable.length} metrics, latest month</div>
                   </button>
                 );

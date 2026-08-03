@@ -9,14 +9,14 @@ const METRICS = [
 // (identification/documentation); weight 2 = not specifically named, given
 // the standard weight rather than assumed into either extreme.
   { key: 'fall_wristband', label: 'Fall-risk wristband on', category: 'fall', target: 90, exclude: [], weight: 1 },
-  { key: 'non_slip_socks', label: 'Non-slip socks on', category: 'fall', target: 85, exclude: [], weight: 2 },
+  { key: 'non_slip_socks', label: 'Non-slip socks on', category: 'fall', target: 85, exclude: [], weight: 3 },
   { key: 'bed_alarm_on', label: 'Bed alarm on', category: 'fall', target: 90, exclude: [], weight: 3 },
   { key: 'bed_alarm_cord_plugged', label: 'Bed alarm cord plugged in', category: 'fall', target: 95, exclude: [], weight: 2 },
   { key: 'call_light_reach', label: 'Call light within reach', category: 'fall', target: 95, exclude: [], weight: 2 },
-  { key: 'tips_board_correct', label: 'TIPS board filled out correctly', category: 'fall', target: 90, exclude: [], weight: 1 },
-  { key: 'posey_alarm_charged', label: 'Posey alarm charged', category: 'fall', target: 95, exclude: ['not_in_room'], weight: 2 },
-  { key: 'gait_belt_present', label: 'Gait belt in room', category: 'fall', target: 85, exclude: [], weight: 3 },
-  { key: 'walker_present', label: 'Walker in room', category: 'fall', target: 80, exclude: [], weight: 3 },
+  { key: 'tips_board_correct', label: 'TIPS board filled out correctly', category: 'fall', target: 90, exclude: [], weight: 2 },
+  { key: 'posey_alarm_charged', label: 'Posey alarm charged', category: 'fall', target: 95, exclude: ['not_in_room'], weight: 1 },
+  { key: 'gait_belt_present', label: 'Gait belt in room', category: 'fall', target: 85, exclude: [], weight: 2 },
+  { key: 'walker_present', label: 'Walker in room', category: 'fall', target: 80, exclude: [], weight: 2 },
   { key: 'shower_chair_present', label: 'Shower chair in bathroom', category: 'fall', target: 80, exclude: [], reference: true },
   { key: 'bedside_commode_present', label: 'Bedside commode in bathroom', category: 'fall', target: 80, exclude: [], reference: true },
 
