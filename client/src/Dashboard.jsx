@@ -8,10 +8,8 @@ import {
   AlertTriangle, ShieldCheck,
 } from 'lucide-react';
 import AddVisitModal from './components/AddVisitModal.jsx';
-import MiniTrendChart from './components/MiniTrendChart.jsx';
-import CategoryRunChart from './components/CategoryRunChart.jsx';
+import SemesterMonthChart from './components/SemesterMonthChart.jsx';
 import StratifiedFindings from './components/StratifiedFindings.jsx';
-import SemesterComparison from './components/SemesterComparison.jsx';
 
 const CATEGORY_META = {
   fall: { label: 'Fall Prevention', active: 'bg-falls-accent text-white', text: 'text-falls-accent', light: 'bg-falls-light' },
@@ -21,6 +19,8 @@ const CATEGORY_META = {
 
 const statusBar = { green: 'bg-status-good', warn: 'bg-status-warn', red: 'bg-status-bad', gray: 'bg-rule' };
 const LOCATION_COLORS = { 'Dell Seton Medical Center': '#f2f2f0', 'Ascension Seton Medical Center': '#8a8a86' };
+const FALL_MONTHS = ['2025-09', '2025-10', '2025-11', '2025-12'];
+const SPRING_MONTHS = ['2026-01', '2026-02', '2026-03', '2026-04'];
 
 function getStatus(pct, target) {
   if (pct === null || pct === undefined) return 'gray';
@@ -259,6 +259,16 @@ export default function Dashboard({ user, onLogout }) {
     return Math.round((weightedSum / totalWeight) * 10) / 10;
   }
 
+  function metricMonthlySeries(metricKey) {
+    if (!monthlyData) return [];
+    const full = monthlyData.metrics.find((m) => m.key === metricKey);
+    if (!full) return [];
+    return monthlyData.months.map((month) => {
+      const cell = full.byMonth[month];
+      return cell ? { month, pct: cell.pct, compliant: cell.compliant, total: cell.total } : { month, pct: null, compliant: 0, total: 0 };
+    });
+  }
+
   function categoryMonthlySeries(cat) {
     if (!monthlyData) return [];
     const catMetrics = withStatus.filter((m) => m.category === cat && !m.reference);
@@ -391,22 +401,27 @@ export default function Dashboard({ user, onLogout }) {
                 );
               })}
             </div>
-            <div>
+            <div className="space-y-3">
               <div className="flex items-center mb-2">
                 <span className="bg-ink text-paper text-[10px] font-semibold px-2 py-0.5">QPS</span>
                 <span className="bg-surface text-ink text-[10px] font-medium px-2 py-0.5">Since Program Start</span>
               </div>
-              <h2 className="text-sm font-semibold text-ink mb-1">Since program start</h2>
-              <p className="text-xs text-text-dim mb-3">Weighted compliance rate by month, every audit on record — {allMonths[0] ? formatMonth(allMonths[0]) : ''} through {allMonths[allMonths.length - 1] ? formatMonth(allMonths[allMonths.length - 1]) : ''}.</p>
-              <div className="grid md:grid-cols-3 gap-3">
-                {['fall', 'hapi', 'education'].map((cat) => (
-                  <CategoryRunChart
-                    key={cat}
-                    label={CATEGORY_META[cat].label}
-                    series={categoryMonthlySeries(cat)}
-                    target={categoryWeightedTarget(cat)}
-                  />
-                ))}
+              <p className="text-xs text-text-dim">Each semester's month-over-month change stands on its own — Fall and Spring aren't compared against each other, since the volunteer cohort, patient population, and program maturity all differ between them.</p>
+              <div>
+                <h2 className="text-sm font-semibold text-ink mb-2">Fall 2025 semester — month over month (Sep, Oct, Nov, Dec)</h2>
+                <div className="grid md:grid-cols-3 gap-3">
+                  {['fall', 'hapi', 'education'].map((cat) => (
+                    <SemesterMonthChart key={cat} label={CATEGORY_META[cat].label} months={FALL_MONTHS} series={categoryMonthlySeries(cat)} target={categoryWeightedTarget(cat)} big />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-ink mb-2">Spring 2026 semester — month over month (Jan, Feb, Mar, Apr)</h2>
+                <div className="grid md:grid-cols-3 gap-3">
+                  {['fall', 'hapi', 'education'].map((cat) => (
+                    <SemesterMonthChart key={cat} label={CATEGORY_META[cat].label} months={SPRING_MONTHS} series={categoryMonthlySeries(cat)} target={categoryWeightedTarget(cat)} big />
+                  ))}
+                </div>
               </div>
             </div>
             <div>
@@ -428,15 +443,31 @@ export default function Dashboard({ user, onLogout }) {
               ))}
             </div>
 
-            <div>
-              <div className="mb-2">
-                <h2 className="text-sm font-semibold text-ink">Compliance by metric, last 6 months</h2>
-                <p className="text-xs text-text-dim">Shaded region indicates performance below the target threshold for each metric.</p>
+            <div className="space-y-4">
+              <p className="text-xs text-text-dim">Each metric's month-over-month change stands on its own per semester — not compared against the other semester, since the volunteer cohort and program maturity differ between them.</p>
+              <div>
+                <h2 className="text-sm font-semibold text-ink mb-2">Fall 2025 — month over month by metric</h2>
+                {catMetrics.every((m) => metricMonthlySeries(m.key).every((s) => s.pct === null)) ? (
+                  <p className="text-sm text-text-dim border border-dashed border-rule rounded p-4">Not tracked yet this semester.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {catMetrics.map((m) => (
+                      <SemesterMonthChart key={m.key} label={m.label} months={FALL_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} />
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {catMetrics.map((m) => (
-                  <MiniTrendChart key={m.key} metric={m} monthlyData={monthlyData} />
-                ))}
+              <div>
+                <h2 className="text-sm font-semibold text-ink mb-2">Spring 2026 — month over month by metric</h2>
+                {catMetrics.every((m) => metricMonthlySeries(m.key).every((s) => s.pct === null)) ? (
+                  <p className="text-sm text-text-dim border border-dashed border-rule rounded p-4">Not tracked yet this semester.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {catMetrics.map((m) => (
+                      <SemesterMonthChart key={m.key} label={m.label} months={SPRING_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} />
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -482,8 +513,6 @@ export default function Dashboard({ user, onLogout }) {
             {(activeTab === 'fall' || activeTab === 'hapi') && (
               <StratifiedFindings category={activeTab} riskLabel={activeTab === 'hapi' ? 'Braden score' : 'Morse score'} />
             )}
-
-            <SemesterComparison category={activeTab} />
           </div>
         )}
 
