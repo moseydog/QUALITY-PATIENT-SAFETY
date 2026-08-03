@@ -33,6 +33,36 @@ function UnitDetail({ unitName }) {
 
   return (
     <div className="space-y-4 px-1">
+      <div>
+        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">Where this unit's compliance score comes from</h4>
+        <p className="text-xs text-text-dim mb-2">Latest available month per metric, most recent audits for this unit. Weight shows how much each metric counts toward the category score above.</p>
+        <div className="bg-surface border border-rule rounded overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b-2 border-ink text-text-muted text-xs uppercase tracking-wide">
+                <th className="text-left px-3 py-2 font-semibold">Metric</th>
+                <th className="text-left px-3 py-2 font-semibold">Category</th>
+                <th className="text-right px-3 py-2 font-semibold">Weight</th>
+                <th className="text-right px-3 py-2 font-semibold">Compliance</th>
+                <th className="text-right px-3 py-2 font-semibold">Goal</th>
+                <th className="text-right px-3 py-2 font-semibold">n</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detail.metricBreakdown.map((m) => (
+                <tr key={m.key} className="border-t border-rule">
+                  <td className="px-3 py-1.5 text-ink">{m.label}</td>
+                  <td className="px-3 py-1.5 text-text-muted capitalize">{m.category}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-text-muted">{m.weight}×</td>
+                  <td className={`px-3 py-1.5 text-right tabular-nums font-semibold ${scoreColorClass(m.pct)}`}>{m.pct !== null ? `${m.pct}%` : '—'}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-text-muted">{m.target}%</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-text-dim">{m.n || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
       <p className="text-xs text-text-dim">Fall and Spring shown as separate panels, not one continuous line — the volunteer program goes idle over winter break, and each semester stands on its own.</p>
       <div>
         <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">Fall 2025 — month over month</h4>

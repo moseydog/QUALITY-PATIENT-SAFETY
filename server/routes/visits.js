@@ -354,6 +354,7 @@ router.get('/stats/by-unit/:unit/monthly', (req, res) => {
 
   const categories = {};
   const targets = {};
+  const metricBreakdown = [];
   ['fall', 'hapi'].forEach((cat) => {
     const catMetrics = METRICS.filter((m) => m.category === cat && !m.reference);
     const totalWeight = catMetrics.reduce((s, m) => s + m.weight, 0);
@@ -363,6 +364,26 @@ router.get('/stats/by-unit/:unit/monthly', (req, res) => {
       perMetricByMonth[m.key] = {};
       unitMonthlyRows(m).forEach((r) => { perMetricByMonth[m.key][r.month] = { compliant: r.compliant, total: r.total }; });
     });
+
+    // Per-metric breakdown: latest available month for this unit, so
+    // leadership can see exactly which specific metrics are driving the
+    // category score up or down, not just the blended average.
+    catMetrics.forEach((m) => {
+      const monthsWithData = Object.keys(perMetricByMonth[m.key]).sort();
+      const latestMonth = monthsWithData[monthsWithData.length - 1];
+      const cell = latestMonth ? perMetricByMonth[m.key][latestMonth] : null;
+      metricBreakdown.push({
+        key: m.key,
+        label: m.label,
+        category: cat,
+        weight: m.weight,
+        target: m.target,
+        latestMonth: latestMonth || null,
+        pct: cell ? Math.round((cell.compliant / cell.total) * 1000) / 10 : null,
+        n: cell ? cell.total : 0,
+      });
+    });
+
     const series = allMonths.map((month) => {
       let totalWeight = 0;
       let weightedSum = 0;
@@ -388,7 +409,7 @@ router.get('/stats/by-unit/:unit/monthly', (req, res) => {
     categories[cat] = series;
   });
 
-  res.json({ unit: unit.name, roomRange: `${unit.min}-${unit.max}`, categories, targets });
+  res.json({ unit: unit.name, roomRange: `${unit.min}-${unit.max}`, categories, targets, metricBreakdown });
 });
 
 router.get('/', (req, res) => {

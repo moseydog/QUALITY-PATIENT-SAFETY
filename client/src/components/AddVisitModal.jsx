@@ -226,6 +226,13 @@ export default function AddVisitModal({ onClose, onSave, error }) {
               <InfoBlock>If applicable, please change out the batteries of the Posey Alarm.</InfoBlock>
               <Field label="Is there a Shower Chair in the bathroom?" value={form.shower_chair_present} onChange={set('shower_chair_present')} options={YES_NO} image="/images/shower_chair.png" />
               <Field label="Is there a Bedside Commode in the bathroom?" value={form.bedside_commode_present} onChange={set('bedside_commode_present')} options={YES_NO} image="/images/bedside_commode.png" />
+
+              <div className="pt-3 mt-1 border-t border-falls-accent space-y-3">
+                <h5 className="text-xs font-semibold text-falls-accent uppercase tracking-wide">Falls prevention education</h5>
+                <ScriptBlock title='Say — "Would it be okay if I go over your fall prevention plan with you?"'>
+                  <p>"I just wanted to remind you that you can always press your call button whenever you need help getting out of bed. It's especially important to call for assistance if you are connected to an IV or other medical devices to prevent accidents from happening. In addition, the medications that you may be taking can cause you to feel drowsy and light-headed. If you feel any of these symptoms, please give us a call so that the nursing staff can assist you."</p>
+                </ScriptBlock>
+              </div>
             </div>
           )}
 
