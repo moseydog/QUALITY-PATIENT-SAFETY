@@ -59,6 +59,7 @@ function MetricCard({ metric, selected, onClick }) {
       onClick={onClick}
       className={`text-left p-4 bg-surface border rounded transition ${selected ? 'border-ink ring-1 ring-ink' : 'border-rule hover:border-text-dim'}`}
     >
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-text-dim mb-0.5">Compliance score</div>
       <div className="text-xs font-medium text-text-muted mb-1 leading-snug flex items-center gap-1.5">
         {label}
         {metric.reference && <span className="text-[9px] font-semibold uppercase tracking-wide bg-surface-2 text-text-dim px-1.5 py-0.5 rounded-full flex-shrink-0">Reference</span>}
@@ -256,7 +257,7 @@ export default function Dashboard({ user, onLogout }) {
 
   function belowTarget(list) {
     return list
-      .filter((c) => !c.reference && c.latestPct !== null && c.latestPct < c.target)
+      .filter((c) => !c.reference && c.category !== 'education' && c.latestPct !== null && c.latestPct < c.target)
       .sort((a, b) => (b.target - b.latestPct) - (a.target - a.latestPct));
   }
 
@@ -404,8 +405,18 @@ export default function Dashboard({ user, onLogout }) {
                   <button key={cat} onClick={() => setActiveTab(cat)}
                     className="text-left p-5 bg-surface border border-rule hover:border-text-dim transition">
                     <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${CATEGORY_META[cat].text}`}>{CATEGORY_META[cat].label}</div>
-                    <div className={`text-4xl font-bold ${scoreColorClass(avg)}`}>{avg !== null ? `${avg}%` : '—'}</div>
-                    <div className="text-xs text-text-dim mt-1">weighted average, {countable.length} metrics, latest month</div>
+                    {cat === 'education' ? (
+                      <>
+                        <div className="text-sm text-text-muted">See month-over-month understanding trends</div>
+                        <div className="text-xs text-text-dim mt-1">{countable.length} knowledge questions tracked, by semester</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-text-dim">Compliance score</div>
+                        <div className={`text-4xl font-bold ${scoreColorClass(avg)}`}>{avg !== null ? `${avg}%` : '—'}</div>
+                        <div className="text-xs text-text-dim mt-1">weighted average, {countable.length} metrics, latest month</div>
+                      </>
+                    )}
                   </button>
                 );
               })}
@@ -420,7 +431,7 @@ export default function Dashboard({ user, onLogout }) {
                 <h2 className="text-sm font-semibold text-ink mb-2">Fall 2025 semester — month over month (Sep, Oct, Nov, Dec)</h2>
                 <div className="grid md:grid-cols-3 gap-3">
                   {['fall', 'hapi', 'education'].map((cat) => (
-                    <SemesterMonthChart key={cat} label={CATEGORY_META[cat].label} months={FALL_MONTHS} series={categoryMonthlySeries(cat)} target={categoryWeightedTarget(cat)} big />
+                    <SemesterMonthChart key={cat} label={CATEGORY_META[cat].label} months={FALL_MONTHS} series={categoryMonthlySeries(cat)} target={categoryWeightedTarget(cat)} showGoal={cat !== 'education'} big />
                   ))}
                 </div>
               </div>
@@ -428,7 +439,7 @@ export default function Dashboard({ user, onLogout }) {
                 <h2 className="text-sm font-semibold text-ink mb-2">Spring 2026 semester — month over month (Jan, Feb, Mar, Apr)</h2>
                 <div className="grid md:grid-cols-3 gap-3">
                   {['fall', 'hapi', 'education'].map((cat) => (
-                    <SemesterMonthChart key={cat} label={CATEGORY_META[cat].label} months={SPRING_MONTHS} series={categoryMonthlySeries(cat)} target={categoryWeightedTarget(cat)} big />
+                    <SemesterMonthChart key={cat} label={CATEGORY_META[cat].label} months={SPRING_MONTHS} series={categoryMonthlySeries(cat)} target={categoryWeightedTarget(cat)} showGoal={cat !== 'education'} big />
                   ))}
                 </div>
               </div>
@@ -446,34 +457,43 @@ export default function Dashboard({ user, onLogout }) {
               <span className="bg-ink text-paper text-[10px] font-semibold px-2 py-0.5">QPS</span>
               <span className="bg-surface text-ink text-[10px] font-medium px-2 py-0.5">{CATEGORY_META[activeTab].label}</span>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {catMetrics.map((m) => (
-                <MetricCard key={m.key} metric={m} selected={selectedMetric === m.key} onClick={() => setSelectedMetric(m.key)} />
-              ))}
-            </div>
+
+            {activeTab === 'education' && (
+              <p className="text-sm text-text-muted">
+                Each question below tests what patients themselves could tell a volunteer — what a pressure injury is, its risk factors, where it occurs, and how to prevent it — not whether staff had already covered it. Kept simple on purpose: no targets or "needs attention" list here, since a knowledge check like this is hard to hold to a fixed compliance bar the way equipment presence is.
+              </p>
+            )}
+
+            {activeTab !== 'education' && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {catMetrics.filter((m) => !m.reference).map((m) => (
+                  <MetricCard key={m.key} metric={m} selected={selectedMetric === m.key} onClick={() => setSelectedMetric(m.key)} />
+                ))}
+              </div>
+            )}
 
             <div className="space-y-4">
               <p className="text-xs text-text-dim">Each metric's month-over-month change stands on its own per semester — not compared against the other semester, since the volunteer cohort and program maturity differ between them.</p>
               <div>
                 <h2 className="text-sm font-semibold text-ink mb-2">Fall 2025 — month over month by metric</h2>
-                {catMetrics.every((m) => metricMonthlySeries(m.key).every((s) => s.pct === null)) ? (
+                {catMetrics.filter((m) => !m.reference).every((m) => metricMonthlySeries(m.key).every((s) => s.pct === null)) ? (
                   <p className="text-sm text-text-dim border border-dashed border-rule rounded p-4">Not tracked yet this semester.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {catMetrics.map((m) => (
-                      <SemesterMonthChart key={m.key} label={m.label} months={FALL_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} />
+                    {catMetrics.filter((m) => !m.reference).map((m) => (
+                      <SemesterMonthChart key={m.key} label={m.label} months={FALL_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} showGoal={activeTab !== 'education'} />
                     ))}
                   </div>
                 )}
               </div>
               <div>
                 <h2 className="text-sm font-semibold text-ink mb-2">Spring 2026 — month over month by metric</h2>
-                {catMetrics.every((m) => metricMonthlySeries(m.key).every((s) => s.pct === null)) ? (
+                {catMetrics.filter((m) => !m.reference).every((m) => metricMonthlySeries(m.key).every((s) => s.pct === null)) ? (
                   <p className="text-sm text-text-dim border border-dashed border-rule rounded p-4">Not tracked yet this semester.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {catMetrics.map((m) => (
-                      <SemesterMonthChart key={m.key} label={m.label} months={SPRING_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} />
+                    {catMetrics.filter((m) => !m.reference).map((m) => (
+                      <SemesterMonthChart key={m.key} label={m.label} months={SPRING_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} showGoal={activeTab !== 'education'} />
                     ))}
                   </div>
                 )}
@@ -514,10 +534,12 @@ export default function Dashboard({ user, onLogout }) {
               </div>
             )}
 
-            <div>
-              <h2 className="text-sm font-semibold text-ink mb-2">Needs attention</h2>
-              <BelowTargetList list={belowTarget(catMetrics)} />
-            </div>
+            {activeTab !== 'education' && (
+              <div>
+                <h2 className="text-sm font-semibold text-ink mb-2">Needs attention</h2>
+                <BelowTargetList list={belowTarget(catMetrics)} />
+              </div>
+            )}
 
             {(activeTab === 'fall' || activeTab === 'hapi') && (
               <StratifiedFindings category={activeTab} riskLabel={activeTab === 'hapi' ? 'Braden score' : 'Morse score'} />

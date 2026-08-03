@@ -29,7 +29,7 @@ function RunChartTooltip({ active, payload, label }) {
 // actually active that term, not to invite a Fall-vs-Spring read, which
 // would conflate too many other differences (cohort, patients, program
 // maturity) to mean anything reliable.
-export default function SemesterMonthChart({ label, months, series, target, big = false }) {
+export default function SemesterMonthChart({ label, months, series, target, big = false, showGoal = true }) {
   const seriesByMonth = {};
   series.forEach((s) => { seriesByMonth[s.month] = s; });
 
@@ -46,7 +46,8 @@ export default function SemesterMonthChart({ label, months, series, target, big 
   const last = withData[withData.length - 1];
   const delta = first && last && first !== last ? Math.round((last.pct - first.pct) * 10) / 10 : null;
   const values = data.flatMap((d) => (d.pct !== null ? [d.low, d.high] : []));
-  const { ticks, domain } = values.length ? niceTicks(Math.min(...values, target), Math.max(...values, target)) : { ticks: [0, 50, 100], domain: [0, 100] };
+  const boundsForScale = showGoal ? [...values, target] : values;
+  const { ticks, domain } = values.length ? niceTicks(Math.min(...boundsForScale), Math.max(...boundsForScale)) : { ticks: [0, 50, 100], domain: [0, 100] };
 
   if (withData.length === 0) return null; // nothing tracked this semester - omit rather than show an empty chart
 
@@ -64,9 +65,11 @@ export default function SemesterMonthChart({ label, months, series, target, big 
             <CartesianGrid stroke="#e4e8eb" strokeDasharray="0" vertical={false} />
             <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#52626e' }} axisLine={{ stroke: '#d7dce1' }} tickLine={false} interval={0} />
             <YAxis domain={domain} ticks={ticks} tick={{ fontSize: 10, fill: '#52626e' }} width={34} axisLine={false} tickLine={false} />
-            <ReferenceLine y={target} stroke="#52626e" strokeDasharray="4 3" strokeWidth={1.25}>
-              <Label value="Goal" position="insideTopRight" fontSize={9} fill="#52626e" />
-            </ReferenceLine>
+            {showGoal && (
+              <ReferenceLine y={target} stroke="#52626e" strokeDasharray="4 3" strokeWidth={1.25}>
+                <Label value="Goal" position="insideTopRight" fontSize={9} fill="#52626e" />
+              </ReferenceLine>
+            )}
             <Tooltip content={<RunChartTooltip />} />
             <Area dataKey="band" stroke="none" fill="#3d6690" fillOpacity={0.12} connectNulls isAnimationActive={false} />
             <Line type="linear" dataKey="pct" stroke="#12283b" strokeWidth={2.25} dot={{ r: 3.5, fill: '#12283b', strokeWidth: 0 }} activeDot={{ r: 5 }} connectNulls isAnimationActive={false} />

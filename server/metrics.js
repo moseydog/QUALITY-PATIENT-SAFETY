@@ -36,7 +36,7 @@ const METRICS = [
   { key: 'knows_pi_risk_factors', label: 'Knows pressure injury risk factors', category: 'education', target: 75, exclude: ['unable_to_assess'], weight: 1 },
   { key: 'knows_pi_locations', label: 'Knows where pressure injuries occur', category: 'education', target: 75, exclude: ['unable_to_assess'], weight: 1 },
   { key: 'knows_pi_prevention', label: 'Knows prevention strategies', category: 'education', target: 75, exclude: ['unable_to_assess'], weight: 1 },
-  { key: 'already_educated_today', label: 'Already educated today (self-report)', category: 'education', target: 70, exclude: ['unable_to_assess'], weight: 1 },
+  { key: 'already_educated_today', label: 'Already educated today (self-report)', category: 'education', target: 70, exclude: ['unable_to_assess'], weight: 1, reference: true },
 ];
 
 const METRIC_KEYS = new Set(METRICS.map((m) => m.key));
