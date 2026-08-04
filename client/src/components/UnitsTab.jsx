@@ -52,7 +52,7 @@ function UnitDetail({ unitName }) {
               {detail.metricBreakdown.map((m) => (
                 <tr key={m.key} className="border-t border-rule">
                   <td className="px-3 py-1.5 text-ink">{m.label}</td>
-                  <td className="px-3 py-1.5 text-text-muted capitalize">{m.category}</td>
+                  <td className="px-3 py-1.5 text-text-muted">{m.category === 'hapi' ? 'HAPI' : 'Falls'}</td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-text-muted">{m.weight}×</td>
                   <td className={`px-3 py-1.5 text-right tabular-nums font-semibold ${scoreColorClass(m.pct)}`}>{m.pct !== null ? `${m.pct}%` : '—'}</td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-text-muted">{m.target}%</td>

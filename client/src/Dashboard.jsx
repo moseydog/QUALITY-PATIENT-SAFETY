@@ -463,7 +463,7 @@ export default function Dashboard({ user, onLogout }) {
 
             {activeTab === 'education' && (
               <p className="text-sm text-text-muted">
-                Patient knowledge of pressure injuries — definition, risk factors, anatomical distribution, and prevention strategies — was assessed directly by volunteers through patient self-report, independent of any prior staff-delivered education. No fixed compliance target is applied to this domain, given the inherent variability of knowledge-based assessment relative to equipment-presence measures.
+                This shows what patients themselves understand about pressure injuries — what they are, what causes them, and how to prevent them — based on talking with a volunteer directly, not on whether a nurse already explained it. There's no fixed target here, since a knowledge check like this is harder to measure against a set bar than simply checking if equipment is in the room.
               </p>
             )}
 
