@@ -463,7 +463,7 @@ export default function Dashboard({ user, onLogout }) {
 
             {activeTab === 'education' && (
               <p className="text-sm text-text-muted">
-                This shows what patients themselves understand about pressure injuries — what they are, what causes them, and how to prevent them — based on talking with a volunteer directly, not on whether a nurse already explained it. There's no fixed target here, since a knowledge check like this is harder to measure against a set bar than simply checking if equipment is in the room.
+                Volunteers ask patients directly whether they understand pressure injuries — what they are, the risk factors, where they occur, and how to prevent them. This matters because patients who understand tend to advocate for their own care, like asking to be turned or have their heels offloaded — patients who don't understand often refuse care they don't see the reason for. This section exists because early data from the program showed most patients didn't actually know what a pressure injury was, which is the gap this education is meant to close.
               </p>
             )}
 
