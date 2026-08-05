@@ -8,6 +8,7 @@ const YES_NO_NA = [...YES_NO, ['not_applicable', 'Not applicable']];
 // audits: every real room number fell inside these ranges except 4 isolated
 // single-occurrence outliers, each almost certainly its own data-entry typo.
 const UNITS = [
+  { name: 'CDU', prefix: 'CDU' },
   { name: 'SICU', min: 201, max: 230 },
   { name: 'MICU', min: 301, max: 330 },
   { name: '4EW', min: 401, max: 430 },
@@ -18,9 +19,14 @@ const UNITS = [
   { name: '7NS', min: 750, max: 779 },
 ];
 function unitForRoom(room) {
-  const n = Number(room);
+  if (room === null || room === undefined) return null;
+  const raw = String(room).trim().toUpperCase();
+  if (raw === '') return null;
+  const prefixMatch = UNITS.find((u) => u.prefix && raw.startsWith(u.prefix));
+  if (prefixMatch) return prefixMatch.name;
+  const n = Number(raw);
   if (!Number.isInteger(n)) return null;
-  const u = UNITS.find((u) => n >= u.min && n <= u.max);
+  const u = UNITS.find((x) => x.min !== undefined && n >= x.min && n <= x.max);
   return u ? u.name : null;
 }
 
@@ -41,7 +47,7 @@ function validateForm(form) {
   const morse = form.morse_score !== '' ? Number(form.morse_score) : null;
 
   if (room && roomIsNumeric && !unitForRoom(room)) {
-    errors.push(`Room ${room} doesn't fall within any known unit's room range (SICU 201-230, MICU 301-330, 4EW 401-430, 4NS 450-479, 5NCC 501-530, 5NS 550-579, 6NS 650-679, 7NS 750-779). Double-check the room number.`);
+    errors.push(`Room ${room} doesn't fall within any known unit's room range (CDU rooms start with "CDU"; SICU 201-230, MICU 301-330, 4EW 401-430, 4NS 450-479, 5NCC 501-530, 5NS 550-579, 6NS 650-679, 7NS 750-779). Double-check the room number.`);
   }
   if (braden !== null && (braden < 6 || braden > 23)) {
     errors.push(`Braden score ${braden} is outside the only clinically valid range (6-23) — this is very likely a room number entered in the wrong field.`);
@@ -192,7 +198,7 @@ export default function AddVisitModal({ onClose, onSave, error }) {
               <label className="text-sm text-ink font-medium">Room number</label>
               <input value={form.room_number} onChange={(e) => set('room_number')(e.target.value)} placeholder="e.g. 452"
                 className="w-full border-b border-rule focus:border-text-muted outline-none px-1 py-2 text-sm mt-2 bg-transparent" />
-              <p className="text-[11px] text-text-dim mt-1">SICU 201-230 · MICU 301-330 · 4EW 401-430 · 4NS 450-479 · 5NCC 501-530 · 5NS 550-579 · 6NS 650-679 · 7NS 750-779</p>
+              <p className="text-[11px] text-text-dim mt-1">CDU (e.g. CDU54) · SICU 201-230 · MICU 301-330 · 4EW 401-430 · 4NS 450-479 · 5NCC 501-530 · 5NS 550-579 · 6NS 650-679 · 7NS 750-779</p>
             </div>
           </div>
           <div className="bg-surface-2 border border-rule rounded-lg p-3">

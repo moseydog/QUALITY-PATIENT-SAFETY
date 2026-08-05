@@ -33,29 +33,31 @@ export default function LoginPage({ onLogin }) {
   }
 
   return (
-    <div className="min-h-screen bg-paper flex items-center justify-center p-4">
+    <div className="min-h-screen bg-surface-2 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <div className="flex border border-rule mb-6">
+        <div className="bg-panel text-panel-text rounded-t px-6 py-5">
+          <span className="bg-panel-text text-panel text-xs font-bold px-2 py-1 rounded">QPS</span>
+          <h1 className="text-base font-semibold mt-3 leading-snug">Quality and Patient Safety Volunteer Program</h1>
+          <p className="text-[11px] text-panel-muted mt-1">Falls &amp; pressure injury prevention · Hospital #1</p>
+        </div>
+        <div className="flex border-x border-rule">
           <button
             type="button"
             onClick={() => setPortal('volunteer')}
-            className={`flex-1 py-2 text-sm font-medium transition ${portal === 'volunteer' ? 'bg-hapi-accent text-white' : 'bg-surface text-text-muted'}`}
+            className={`flex-1 py-2.5 text-sm font-medium transition ${portal === 'volunteer' ? 'bg-surface text-ink border-b-2 border-ink' : 'bg-surface-2 text-text-muted border-b border-rule hover:text-ink'}`}
           >
             Volunteer
           </button>
           <button
             type="button"
             onClick={() => setPortal('admin')}
-            className={`flex-1 py-2 text-sm font-medium transition ${portal === 'admin' ? 'bg-ink text-paper' : 'bg-surface text-text-muted'}`}
+            className={`flex-1 py-2.5 text-sm font-medium transition ${portal === 'admin' ? 'bg-surface text-ink border-b-2 border-ink' : 'bg-surface-2 text-text-muted border-b border-rule hover:text-ink'}`}
           >
             Admin
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="bg-surface border-t-2 border-ink border-x border-b border-rule p-6 space-y-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-editorial mb-1">{portal === 'admin' ? 'Administrator access' : 'Volunteer access'}</p>
-            <h1 className="font-serif text-xl font-semibold text-ink">Quality and Patient Safety Volunteer Program</h1>
-          </div>
+        <form onSubmit={handleSubmit} className="bg-surface border-x border-b border-rule rounded-b p-6 space-y-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-dim">{portal === 'admin' ? 'Administrator sign-in' : 'Volunteer sign-in'}</p>
           <div>
             <label className="text-xs text-text-muted">Username</label>
             <input

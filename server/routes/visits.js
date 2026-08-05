@@ -2,7 +2,7 @@ const express = require('express');
 const db = require('../db');
 const { requireAuth, requireRole } = require('../middleware');
 const { METRICS } = require('../metrics');
-const { UNITS, unitForRoom } = require('../units');
+const { UNITS, unitForRoom, roomRangeLabel } = require('../units');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -142,10 +142,13 @@ router.get('/quality-check', requireRole('admin'), (req, res) => {
   ).all();
   swappedMorse.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Likely field swap: room number exactly matches the Morse score', detail: String(r.morse_score) }));
 
+  // Check every recorded room, not just numeric ones - a value like "VB24"
+  // is neither a valid range nor a known unit prefix, and previously slipped
+  // past this check entirely because the query filtered to digits only.
   const allRoomed = db.prepare(
-    `SELECT id, audit_date, room_number FROM audit_visits WHERE room_number IS NOT NULL AND room_number GLOB '[0-9]*' AND ${SCOPE_SQL}`
+    `SELECT id, audit_date, room_number FROM audit_visits WHERE room_number IS NOT NULL AND TRIM(room_number) != '' AND ${SCOPE_SQL}`
   ).all();
-  allRoomed.filter((r) => !unitForRoom(r.room_number)).forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: "Room number doesn't fall within any known unit's range — likely a typo", detail: '' }));
+  allRoomed.filter((r) => !unitForRoom(r.room_number)).forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: "Room number matches no known unit — likely a typo", detail: '' }));
 
   const fallInconsistent = db.prepare(
     `SELECT id, audit_date, room_number FROM audit_visits
@@ -290,9 +293,14 @@ router.get('/stats/by-unit', (req, res) => {
   const byUnit = {};
   UNITS.forEach((u) => { byUnit[u.name] = { rows: [], bradenSum: 0, bradenN: 0, morseSum: 0, morseN: 0 }; });
 
+  // Audits whose room number matches no known unit are counted separately
+  // rather than dropped, so the per-unit totals always reconcile against the
+  // overall audit count.
+  const unassigned = [];
+
   rows.forEach((r) => {
     const unit = unitForRoom(r.room_number);
-    if (!unit) return; // room number doesn't fall in any known unit range
+    if (!unit) { unassigned.push(r.room_number); return; }
     byUnit[unit].rows.push(r);
     if (r.braden_score !== null && r.braden_score >= 6 && r.braden_score <= 23) {
       byUnit[unit].bradenSum += r.braden_score;
@@ -326,15 +334,34 @@ router.get('/stats/by-unit', (req, res) => {
       categoryScores[cat] = totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) / 10 : null;
     });
 
-    return { unit: u.name, roomRange: `${u.min}-${u.max}`, totalAudits, avgBraden, avgMorse, ...categoryScores };
+    return { unit: u.name, roomRange: roomRangeLabel(u), totalAudits, avgBraden, avgMorse, ...categoryScores };
   });
 
-  res.json({ units: out, scopeRange: `${SCOPE_START} to ${SCOPE_END}`, minSampleSize: MIN_SAMPLE_SIZE });
+  const assignedTotal = out.reduce((s, u) => s + u.totalAudits, 0);
+  res.json({
+    units: out,
+    scopeRange: `${SCOPE_START} to ${SCOPE_END}`,
+    minSampleSize: MIN_SAMPLE_SIZE,
+    reconciliation: {
+      auditsInScope: rows.length,
+      assignedToUnit: assignedTotal,
+      unassigned: unassigned.length,
+      unassignedRooms: Array.from(new Set(unassigned.map((r) => String(r).trim()))).sort(),
+    },
+  });
 });
 
 router.get('/stats/by-unit/:unit/monthly', (req, res) => {
   const unit = UNITS.find((u) => u.name === req.params.unit);
   if (!unit) return res.status(404).json({ error: 'Unknown unit' });
+
+  // Prefix units (CDU) match on the room string; floor units match on a
+  // numeric range. A plain numeric BETWEEN silently excluded every CDU audit,
+  // so the predicate has to branch on the unit type.
+  const roomPredicate = unit.prefix
+    ? "UPPER(TRIM(room_number)) LIKE ? || '%'"
+    : "room_number GLOB '[0-9]*' AND CAST(room_number AS INTEGER) BETWEEN ? AND ?";
+  const roomParams = unit.prefix ? [unit.prefix] : [unit.min, unit.max];
 
   function unitMonthlyRows(metric) {
     const notInSql = metric.exclude.length ? `AND ${metric.key} NOT IN (${metric.exclude.map(() => '?').join(',')})` : '';
@@ -344,10 +371,10 @@ router.get('/stats/by-unit/:unit/monthly', (req, res) => {
         COUNT(*) as total
       FROM audit_visits
       WHERE ${metric.key} IS NOT NULL AND audit_date IS NOT NULL AND ${SCOPE_SQL}
-        AND CAST(room_number AS INTEGER) BETWEEN ? AND ? ${notInSql}
+        AND ${roomPredicate} ${notInSql}
       GROUP BY month HAVING total >= ${MIN_SAMPLE_SIZE} ORDER BY month
     `;
-    return db.prepare(sql).all(unit.min, unit.max, ...metric.exclude);
+    return db.prepare(sql).all(...roomParams, ...metric.exclude);
   }
 
   const allMonths = db.prepare(`SELECT DISTINCT substr(audit_date,1,7) as month FROM audit_visits WHERE audit_date IS NOT NULL AND ${SCOPE_SQL} ORDER BY month`).all().map((r) => r.month);

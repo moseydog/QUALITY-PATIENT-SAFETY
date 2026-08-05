@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   Plus, X, Trash2, Users, KeyRound, Settings, TrendingUp, TrendingDown,
-  AlertTriangle, ShieldCheck,
+  AlertTriangle, ShieldCheck, Menu,
 } from 'lucide-react';
 import AddVisitModal from './components/AddVisitModal.jsx';
 import SemesterMonthChart from './components/SemesterMonthChart.jsx';
@@ -119,6 +119,7 @@ export default function Dashboard({ user, onLogout }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showQuality, setShowQuality] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const [qualityIssues, setQualityIssues] = useState(null);
   const [qualityCounts, setQualityCounts] = useState(null);
   const [monthlyData, setMonthlyData] = useState(null);
@@ -339,63 +340,103 @@ export default function Dashboard({ user, onLogout }) {
   const allMonths = monthlyData ? monthlyData.months : [];
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-surface-2 text-text-dim text-sm">Loading dashboard…</div>;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-surface-2 gap-3">
+        <span className="bg-panel text-panel-text text-xs font-bold px-2.5 py-1.5 rounded">QPS</span>
+        <p className="text-text-muted text-sm">Loading compliance data…</p>
+      </div>
+    );
   }
 
   const detailMetric = selectedMetric ? withStatus.find((m) => m.key === selectedMetric) : null;
   const catMetrics = activeTab === 'overview' ? null : byCategory[activeTab];
 
-  return (
-    <div className="min-h-screen flex">
-      <aside className="w-60 bg-panel text-panel-text flex-shrink-0 flex flex-col">
-        <div className="p-5 border-b border-panel-rule">
-          <span className="bg-panel-text text-panel text-xs font-bold px-2 py-1 rounded">QPS</span>
-          <h1 className="text-sm font-semibold mt-2.5 leading-snug">Quality and Patient Safety Volunteer Program</h1>
-          <p className="text-[11px] text-panel-muted mt-1">Hospital #1</p>
-        </div>
-        <nav className="flex-1 p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-panel-muted px-2 mb-1.5">Navigation</p>
-          {['overview', 'fall', 'hapi', 'education', 'units', 'audits'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => { setActiveTab(tab); setSelectedMetric(null); }}
-              className={`w-full text-left px-2.5 py-2 rounded text-sm font-medium transition mb-0.5 ${
-                activeTab === tab ? 'bg-panel-2 text-panel-text' : 'text-panel-muted hover:bg-panel-2 hover:text-panel-text'
-              }`}
-            >
-              {tab === 'overview' ? 'Overview' : tab === 'audits' ? 'Audits' : tab === 'units' ? 'Units' : CATEGORY_META[tab].label}
-            </button>
-          ))}
-          <button onClick={() => setShowAddVisit(true)} className="w-full mt-4 px-2.5 py-2 rounded text-sm font-semibold bg-panel-text text-panel flex items-center gap-1.5 justify-center">
-            <Plus size={14} /> Add visit
+  const NAV_TABS = ['overview', 'fall', 'hapi', 'education', 'units', 'audits'];
+  const tabLabel = (tab) => (tab === 'overview' ? 'Overview' : tab === 'audits' ? 'Audits' : tab === 'units' ? 'Units' : CATEGORY_META[tab].label);
+  const goToTab = (tab) => { setActiveTab(tab); setSelectedMetric(null); setNavOpen(false); };
+
+  const sidebarContent = (
+    <>
+      <div className="p-5 border-b border-panel-rule">
+        <span className="bg-panel-text text-panel text-xs font-bold px-2 py-1 rounded">QPS</span>
+        <h1 className="text-sm font-semibold mt-2.5 leading-snug">Quality and Patient Safety Volunteer Program</h1>
+        <p className="text-[11px] text-panel-muted mt-1">Hospital #1</p>
+      </div>
+      <nav className="flex-1 p-3 overflow-y-auto">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-panel-muted px-2 mb-1.5">Navigation</p>
+        {NAV_TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => goToTab(tab)}
+            className={`w-full text-left px-2.5 py-2 rounded text-sm font-medium transition mb-0.5 ${
+              activeTab === tab ? 'bg-panel-2 text-panel-text' : 'text-panel-muted hover:bg-panel-2 hover:text-panel-text'
+            }`}
+          >
+            {tabLabel(tab)}
           </button>
-          {isAdmin && (
-            <>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-panel-muted px-2 mb-1.5 mt-5">Admin tools</p>
-              <button onClick={() => { setShowQuality(true); runQualityCheck(); }} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
-                <ShieldCheck size={14} /> Data quality
-              </button>
-              <button onClick={() => setShowUsers(true)} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
-                <Users size={14} /> Manage users
-              </button>
-              <button onClick={() => setShowSettings(true)} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
-                <Settings size={14} /> Targets
-              </button>
-            </>
-          )}
-        </nav>
-        <div className="p-4 border-t border-panel-rule text-xs">
-          <div className="font-medium text-panel-text">{user.display_name || user.username}</div>
-          <div className="text-panel-muted capitalize mb-2">{user.role}</div>
-          <div className="flex gap-3">
-            <button onClick={() => setShowPassword(true)} className="text-panel-muted hover:text-panel-text underline underline-offset-2">Password</button>
-            <button onClick={onLogout} className="text-panel-muted hover:text-panel-text underline underline-offset-2">Log out</button>
-          </div>
+        ))}
+        <button onClick={() => { setShowAddVisit(true); setNavOpen(false); }} className="w-full mt-4 px-2.5 py-2 rounded text-sm font-semibold bg-panel-text text-panel flex items-center gap-1.5 justify-center">
+          <Plus size={14} /> Add visit
+        </button>
+        {isAdmin && (
+          <>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-panel-muted px-2 mb-1.5 mt-5">Admin tools</p>
+            <button onClick={() => { setShowQuality(true); runQualityCheck(); setNavOpen(false); }} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
+              <ShieldCheck size={14} /> Data quality
+            </button>
+            <button onClick={() => { setShowUsers(true); setNavOpen(false); }} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
+              <Users size={14} /> Manage users
+            </button>
+            <button onClick={() => { setShowSettings(true); setNavOpen(false); }} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
+              <Settings size={14} /> Targets
+            </button>
+          </>
+        )}
+      </nav>
+      <div className="p-4 border-t border-panel-rule text-xs">
+        <div className="font-medium text-panel-text">{user.display_name || user.username}</div>
+        <div className="text-panel-muted capitalize mb-2">{user.role}</div>
+        <div className="flex gap-3">
+          <button onClick={() => { setShowPassword(true); setNavOpen(false); }} className="text-panel-muted hover:text-panel-text underline underline-offset-2">Password</button>
+          <button onClick={onLogout} className="text-panel-muted hover:text-panel-text underline underline-offset-2">Log out</button>
         </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="min-h-screen md:flex">
+      {/* Mobile top bar — the fixed-width sidebar left only ~135px of usable
+          width on a phone, which is the main device volunteers use. */}
+      <header className="md:hidden sticky top-0 z-30 bg-panel text-panel-text flex items-center gap-3 px-4 py-3 border-b border-panel-rule">
+        <button onClick={() => setNavOpen(true)} aria-label="Open navigation" className="p-1 -ml-1">
+          <Menu size={20} />
+        </button>
+        <span className="bg-panel-text text-panel text-[10px] font-bold px-1.5 py-0.5 rounded">QPS</span>
+        <span className="text-sm font-medium truncate">{tabLabel(activeTab)}</span>
+        <button onClick={() => setShowAddVisit(true)} className="ml-auto bg-panel-text text-panel text-xs font-semibold px-2.5 py-1.5 rounded flex items-center gap-1">
+          <Plus size={13} /> Add
+        </button>
+      </header>
+
+      {navOpen && (
+        <div className="md:hidden fixed inset-0 z-40 flex">
+          <div className="w-64 max-w-[80%] bg-panel text-panel-text flex flex-col shadow-xl">
+            <button onClick={() => setNavOpen(false)} aria-label="Close navigation" className="absolute top-3 right-3 text-panel-muted p-1">
+              <X size={18} />
+            </button>
+            {sidebarContent}
+          </div>
+          <div className="flex-1 bg-black/50" onClick={() => setNavOpen(false)} />
+        </div>
+      )}
+
+      <aside className="hidden md:flex w-60 bg-panel text-panel-text flex-shrink-0 flex-col">
+        {sidebarContent}
       </aside>
 
       <main className="flex-1 min-w-0 bg-paper">
-      <div className="max-w-6xl mx-auto p-6 md:p-8 space-y-8">
+      <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8">
 
         {activeTab === 'overview' && (
           <div className="space-y-8">
@@ -404,6 +445,9 @@ export default function Dashboard({ user, onLogout }) {
                 const list = byCategory[cat];
                 const countable = list.filter((m) => !m.reference);
                 const avg = categoryAvg(list);
+                const scored = countable.filter((m) => m.latestPct !== null);
+                const maxN = scored.length ? Math.max(...scored.map((m) => m.n || 0)) : 0;
+                const reportingMonth = scored.length ? scored[0].latestMonth : null;
                 return (
                   <button key={cat} onClick={() => setActiveTab(cat)}
                     className="text-left p-5 bg-surface border border-rule hover:border-text-dim transition">
@@ -417,7 +461,9 @@ export default function Dashboard({ user, onLogout }) {
                       <>
                         <div className="text-[10px] font-semibold uppercase tracking-wide text-text-dim">Compliance score</div>
                         <div className={`text-4xl font-bold ${scoreColorClass(avg)}`}>{avg !== null ? `${avg}%` : '—'}</div>
-                        <div className="text-xs text-text-dim mt-1">weighted average, {countable.length} metrics, latest month</div>
+                        <div className="text-xs text-text-dim mt-1">
+                          Weighted across {countable.length} metrics{reportingMonth ? ` · ${formatMonth(reportingMonth)}` : ''}{maxN ? ` · up to ${maxN} audits` : ''}
+                        </div>
                       </>
                     )}
                   </button>

@@ -149,6 +149,16 @@ export default function UnitsTab() {
         </table>
       </div>
       <p className="text-[11px] text-text-dim">Compliance rates colored the same as elsewhere: above 75% green, 50–75% yellow, below 50% red. A blank cell means fewer than {data.minSampleSize} audits answered that question for that unit.</p>
+      {data.reconciliation && (
+        <div className="bg-surface-2 border border-rule rounded px-3 py-2 text-[11px] text-text-muted">
+          <strong className="text-ink">{data.reconciliation.auditsInScope}</strong> audits in the analyzed range ·{' '}
+          <strong className="text-ink">{data.reconciliation.assignedToUnit}</strong> matched to a unit ·{' '}
+          <strong className="text-ink">{data.reconciliation.unassigned}</strong> unmatched
+          {data.reconciliation.unassigned > 0 && (
+            <> — room {data.reconciliation.unassignedRooms.map((r) => `"${r}"`).join(', ')} {data.reconciliation.unassigned === 1 ? 'does' : "don't"} match any unit's range and {data.reconciliation.unassigned === 1 ? 'is' : 'are'} likely typos. These appear in the Data quality panel.</>
+          )}
+        </div>
+      )}
     </div>
   );
 }
