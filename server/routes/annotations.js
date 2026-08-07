@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireAuth, requireRole } = require('../middleware');
+const { METRICS } = require('../metrics');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -16,6 +17,7 @@ function validate(b) {
   if (b.end_month < b.start_month) return 'End month cannot be before start month';
   if (b.scope && !SCOPES.includes(b.scope)) return 'Unknown scope';
   if (b.kind && !KINDS.includes(b.kind)) return 'Unknown kind';
+  if (b.metric_key && !METRICS.some((m) => m.key === b.metric_key)) return 'Unknown metric';
   return null;
 }
 
@@ -29,8 +31,8 @@ router.post('/', requireRole('admin'), (req, res) => {
   const err = validate(b);
   if (err) return res.status(400).json({ error: err });
   const info = db.prepare(
-    'INSERT INTO annotations (start_month, end_month, scope, kind, title, detail) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(b.start_month, b.end_month, b.scope || 'all', b.kind || 'other', String(b.title).trim(), b.detail || null);
+    'INSERT INTO annotations (start_month, end_month, scope, kind, metric_key, title, detail) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(b.start_month, b.end_month, b.scope || 'all', b.kind || 'other', b.metric_key || null, String(b.title).trim(), b.detail || null);
   res.json({ id: info.lastInsertRowid });
 });
 
@@ -41,8 +43,8 @@ router.put('/:id', requireRole('admin'), (req, res) => {
   const existing = db.prepare('SELECT id FROM annotations WHERE id = ?').get(Number(req.params.id));
   if (!existing) return res.status(404).json({ error: 'No such annotation' });
   db.prepare(
-    'UPDATE annotations SET start_month=?, end_month=?, scope=?, kind=?, title=?, detail=? WHERE id=?'
-  ).run(b.start_month, b.end_month, b.scope || 'all', b.kind || 'other', String(b.title).trim(), b.detail || null, Number(req.params.id));
+    'UPDATE annotations SET start_month=?, end_month=?, scope=?, kind=?, metric_key=?, title=?, detail=? WHERE id=?'
+  ).run(b.start_month, b.end_month, b.scope || 'all', b.kind || 'other', b.metric_key || null, String(b.title).trim(), b.detail || null, Number(req.params.id));
   res.json({ ok: true });
 });
 

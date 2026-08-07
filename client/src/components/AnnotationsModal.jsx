@@ -24,9 +24,9 @@ function monthLabel(ym) {
   return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
-const EMPTY = { start_month: '2026-01', end_month: '2026-04', scope: 'all', kind: 'staffing', title: '', detail: '' };
+const EMPTY = { start_month: '2026-01', end_month: '2026-04', scope: 'all', kind: 'staffing', metric_key: '', title: '', detail: '' };
 
-export default function AnnotationsModal({ annotations, onClose, onSave, onDelete, error }) {
+export default function AnnotationsModal({ annotations, metrics = [], onClose, onSave, onDelete, error }) {
   const [draft, setDraft] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
   const set = (k) => (v) => setDraft((d) => ({ ...d, [k]: v }));
@@ -35,7 +35,7 @@ export default function AnnotationsModal({ annotations, onClose, onSave, onDelet
     setEditingId(a.id);
     setDraft({
       start_month: a.start_month, end_month: a.end_month,
-      scope: a.scope, kind: a.kind, title: a.title, detail: a.detail || '',
+      scope: a.scope, kind: a.kind, metric_key: a.metric_key || '', title: a.title, detail: a.detail || '',
     });
   }
   function reset() { setEditingId(null); setDraft(EMPTY); }
@@ -68,7 +68,9 @@ export default function AnnotationsModal({ annotations, onClose, onSave, onDelet
                     <div className="text-sm font-medium text-ink">{a.title}</div>
                     <div className="text-[11px] text-text-dim mt-0.5">
                       {monthLabel(a.start_month)}{a.start_month !== a.end_month ? ` – ${monthLabel(a.end_month)}` : ''}
-                      {' · '}{(SCOPES.find((s) => s[0] === a.scope) || [])[1]}
+                      {' · '}{a.metric_key
+                        ? ((metrics.find((m) => m.key === a.metric_key) || {}).label || a.metric_key)
+                        : (SCOPES.find((s) => s[0] === a.scope) || [])[1]}
                       {' · '}{(KINDS.find((k) => k[0] === a.kind) || [])[1]}
                     </div>
                     {a.detail && <p className="text-xs text-text-muted mt-1">{a.detail}</p>}
@@ -113,10 +115,21 @@ export default function AnnotationsModal({ annotations, onClose, onSave, onDelet
               </div>
               <div>
                 <label className="text-xs text-text-muted">Applies to</label>
-                <select value={draft.scope} onChange={(e) => set('scope')(e.target.value)}
+                <select value={draft.scope} onChange={(e) => { setDraft((d) => ({ ...d, scope: e.target.value, metric_key: '' })); }}
                   className="w-full border border-rule rounded px-3 py-2 text-sm mt-1">
                   {SCOPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs text-text-muted">Specific metric (optional)</label>
+                <select value={draft.metric_key} onChange={(e) => set('metric_key')(e.target.value)}
+                  className="w-full border border-rule rounded px-3 py-2 text-sm mt-1">
+                  <option value="">All metrics in the category above</option>
+                  {metrics
+                    .filter((m) => draft.scope === 'all' || m.category === draft.scope)
+                    .map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
+                </select>
+                <p className="text-[11px] text-text-dim mt-1">Pick a metric to attach this note only to that one chart — useful when leadership addressed a specific measure.</p>
               </div>
               <div>
                 <label className="text-xs text-text-muted">Type</label>

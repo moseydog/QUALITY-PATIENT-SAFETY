@@ -318,9 +318,18 @@ export default function Dashboard({ user, onLogout }) {
     });
   }
 
-  // Annotations relevant to a category: scope 'all' applies everywhere.
+  // Category-level charts show only category-wide notes — a note attached to
+  // one specific metric would be misleading on a blended score.
   function annotationsFor(cat) {
-    return annotations.filter((a) => a.scope === 'all' || a.scope === cat);
+    return annotations.filter((a) => !a.metric_key && (a.scope === 'all' || a.scope === cat));
+  }
+
+  // A metric chart shows its own metric-specific note if one exists, plus any
+  // category-wide notes that apply to it.
+  function annotationsForMetric(metricKey, cat) {
+    return annotations.filter((a) => (
+      a.metric_key === metricKey || (!a.metric_key && (a.scope === 'all' || a.scope === cat))
+    ));
   }
 
   function categoryMonthlySeries(cat) {
@@ -578,7 +587,7 @@ export default function Dashboard({ user, onLogout }) {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {catMetrics.filter((m) => !m.reference).map((m) => (
-                      <SemesterMonthChart key={m.key} label={m.label} months={FALL_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} showGoal={activeTab !== 'education'} annotations={annotationsFor(activeTab)} />
+                      <SemesterMonthChart key={m.key} label={m.label} months={FALL_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} showGoal={activeTab !== 'education'} annotations={annotationsForMetric(m.key, activeTab)} />
                     ))}
                   </div>
                 )}
@@ -590,7 +599,7 @@ export default function Dashboard({ user, onLogout }) {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {catMetrics.filter((m) => !m.reference).map((m) => (
-                      <SemesterMonthChart key={m.key} label={m.label} months={SPRING_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} showGoal={activeTab !== 'education'} annotations={annotationsFor(activeTab)} />
+                      <SemesterMonthChart key={m.key} label={m.label} months={SPRING_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} showGoal={activeTab !== 'education'} annotations={annotationsForMetric(m.key, activeTab)} />
                     ))}
                   </div>
                 )}
@@ -699,6 +708,7 @@ export default function Dashboard({ user, onLogout }) {
       {showAnnotations && isAdmin && (
         <AnnotationsModal
           annotations={annotations}
+          metrics={withStatus.filter((m) => !m.reference)}
           onClose={() => { setShowAnnotations(false); setAnnotationError(null); }}
           onSave={handleSaveAnnotation}
           onDelete={handleDeleteAnnotation}
