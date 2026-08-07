@@ -3,6 +3,7 @@ const db = require('../db');
 const { requireAuth, requireRole } = require('../middleware');
 const { METRICS } = require('../metrics');
 const { UNITS, unitForRoom, roomRangeLabel } = require('../units');
+const quality = require('../quality');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -133,78 +134,8 @@ router.get('/stats/monthly-table', (req, res) => {
 // Rule-based data-quality checks - flags rows worth a human's review rather
 // than claiming to independently verify what happened in a patient's room.
 router.get('/quality-check', requireRole('admin'), (req, res) => {
-  const issues = [];
-
-  const badBraden = db.prepare(
-    `SELECT id, audit_date, room_number, braden_score FROM audit_visits WHERE braden_score IS NOT NULL AND (braden_score < 6 OR braden_score > 23) AND ${SCOPE_SQL}`
-  ).all();
-  badBraden.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Braden score out of range (valid: 6-23)', detail: String(r.braden_score) }));
-
-  const badMorse = db.prepare(
-    `SELECT id, audit_date, room_number, morse_score FROM audit_visits WHERE morse_score IS NOT NULL AND (morse_score < 0 OR morse_score > 125) AND ${SCOPE_SQL}`
-  ).all();
-  badMorse.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Morse score out of range (valid: 0-125)', detail: String(r.morse_score) }));
-
-  // Precise field-swap signal: the score in this row exactly equals the room
-  // number typed for it. Room numbers here run 3 digits; a 1-2 digit "room"
-  // that's identical to the Braden or Morse score is very likely the two
-  // fields getting swapped during entry, not a coincidence.
-  const swappedBraden = db.prepare(
-    `SELECT id, audit_date, room_number, braden_score FROM audit_visits
-     WHERE braden_score IS NOT NULL AND room_number = CAST(braden_score AS TEXT) AND LENGTH(room_number) <= 2 AND ${SCOPE_SQL}`
-  ).all();
-  swappedBraden.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Likely field swap: room number exactly matches the Braden score', detail: String(r.braden_score) }));
-
-  const swappedMorse = db.prepare(
-    `SELECT id, audit_date, room_number, morse_score FROM audit_visits
-     WHERE morse_score IS NOT NULL AND room_number = CAST(morse_score AS TEXT) AND LENGTH(room_number) <= 2 AND ${SCOPE_SQL}`
-  ).all();
-  swappedMorse.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Likely field swap: room number exactly matches the Morse score', detail: String(r.morse_score) }));
-
-  // Check every recorded room, not just numeric ones - a value like "VB24"
-  // is neither a valid range nor a known unit prefix, and previously slipped
-  // past this check entirely because the query filtered to digits only.
-  const allRoomed = db.prepare(
-    `SELECT id, audit_date, room_number FROM audit_visits WHERE room_number IS NOT NULL AND TRIM(room_number) != '' AND ${SCOPE_SQL}`
-  ).all();
-  allRoomed.filter((r) => !unitForRoom(r.room_number)).forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: "Room number matches no known unit — likely a typo", detail: '' }));
-
-  const fallInconsistent = db.prepare(
-    `SELECT id, audit_date, room_number FROM audit_visits
-     WHERE is_fall_risk = 'no' AND (morse_score IS NOT NULL OR fall_wristband IS NOT NULL OR bed_alarm_on IS NOT NULL) AND ${SCOPE_SQL}`
-  ).all();
-  fallInconsistent.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Marked not a fall risk, but fall equipment fields were filled in', detail: '' }));
-
-  const hapiInconsistent = db.prepare(
-    `SELECT id, audit_date, room_number FROM audit_visits
-     WHERE is_hapi_risk = 'no' AND (braden_score IS NOT NULL OR heels_offloaded IS NOT NULL OR primo_boots IS NOT NULL) AND ${SCOPE_SQL}`
-  ).all();
-  hapiInconsistent.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Marked not a HAPI risk, but HAPI fields were filled in', detail: '' }));
-
-  const wrongLocation = db.prepare(
-    `SELECT id, audit_date, room_number, location FROM audit_visits WHERE location = 'Hospital #2' AND ${SCOPE_SQL}`
-  ).all();
-  wrongLocation.forEach((r) => issues.push({ id: r.id, date: r.audit_date, room: r.room_number, type: 'Location is Hospital #2 — no audits have actually happened there yet', detail: '' }));
-
-  const duplicates = db.prepare(
-    `SELECT audit_date, room_number, COUNT(*) as c FROM audit_visits
-     WHERE audit_date IS NOT NULL AND room_number IS NOT NULL AND room_number != '' AND ${SCOPE_SQL}
-     GROUP BY audit_date, room_number HAVING c > 1`
-  ).all();
-  duplicates.forEach((r) => issues.push({ id: null, date: r.audit_date, room: r.room_number, type: `Possible duplicate — ${r.c} audits logged for this room on this date`, detail: '' }));
-
-  const totalAll = db.prepare('SELECT COUNT(*) as c FROM audit_visits').get().c;
-  const totalInScope = db.prepare(`SELECT COUNT(*) as c FROM audit_visits WHERE ${SCOPE_SQL}`).get().c;
-  const totalOutOfScope = totalAll - totalInScope;
-  const counts = {
-    totalInDatabase: totalAll,
-    inScope: totalInScope,
-    outOfScope: totalOutOfScope,
-    scopeRange: `${SCOPE_START} to ${SCOPE_END}`,
-    minSampleSize: MIN_SAMPLE_SIZE,
-  };
-
-  res.json({ count: issues.length, issues, counts });
+  // Served from the continuously-refreshed cache; ?refresh=1 forces a sweep.
+  res.json(req.query.refresh ? { ...quality.refresh(), lastRunAt: new Date().toISOString() } : quality.getLatest());
 });
 
 // Risk-stratified snapshot for the most recent in-scope month, mirroring the
@@ -519,6 +450,9 @@ router.post('/', (req, res) => {
     `INSERT INTO audit_visits (${cols.join(',')}, submitted_at, submitted_by_email, created_by)
      VALUES (${placeholders}, datetime('now'), ?, ?)`
   ).run(...values, req.user.username, req.user.id);
+  // Re-run the sweep so a newly-submitted audit is checked immediately
+  // rather than waiting for the next scheduled pass.
+  try { quality.refresh(); } catch (e) { /* never block a submission on this */ }
   res.json({ id: info.lastInsertRowid });
 });
 

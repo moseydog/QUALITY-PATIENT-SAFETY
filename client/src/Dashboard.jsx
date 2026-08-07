@@ -125,6 +125,8 @@ export default function Dashboard({ user, onLogout }) {
   const [showAnnotations, setShowAnnotations] = useState(false);
   const [qualityIssues, setQualityIssues] = useState(null);
   const [qualityCounts, setQualityCounts] = useState(null);
+  const [qualityCount, setQualityCount] = useState(0);
+  const [qualityLastRun, setQualityLastRun] = useState(null);
   const [monthlyData, setMonthlyData] = useState(null);
 
   const [userError, setUserError] = useState(null);
@@ -145,17 +147,27 @@ export default function Dashboard({ user, onLogout }) {
   }
   async function refetchMonthly() { setMonthlyData(await api('/api/visits/stats/monthly-table')); }
   async function refetchAnnotations() { setAnnotations(await api('/api/annotations')); }
+  async function refetchQualityCount() {
+    if (!isAdmin) return;
+    try {
+      const d = await api('/api/visits/quality-check');
+      setQualityCount(d.count || 0);
+      setQualityLastRun(d.lastRunAt || null);
+    } catch (e) { /* badge is non-critical */ }
+  }
   async function runQualityCheck() {
     if (!isAdmin) return;
     const data = await api('/api/visits/quality-check');
     setQualityIssues(data.issues);
     setQualityCounts(data.counts);
+    setQualityCount(data.count || 0);
+    setQualityLastRun(data.lastRunAt || null);
   }
 
   useEffect(() => {
     (async () => {
       try {
-        await Promise.all([refetchSummary(), refetchUsers(), refetchVisits(), refetchMonthly(), refetchAnnotations()]);
+        await Promise.all([refetchSummary(), refetchUsers(), refetchVisits(), refetchMonthly(), refetchAnnotations(), refetchQualityCount()]);
       } catch (e) { /* handled by empty states */ }
       setLoading(false);
     })();
@@ -413,6 +425,9 @@ export default function Dashboard({ user, onLogout }) {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-panel-muted px-2 mb-1.5 mt-5">Admin tools</p>
             <button onClick={() => { setShowQuality(true); runQualityCheck(); setNavOpen(false); }} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
               <ShieldCheck size={14} /> Data quality
+              {qualityCount > 0 && (
+                <span className="ml-auto bg-status-warn text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{qualityCount}</span>
+              )}
             </button>
             <button onClick={() => { setShowAnnotations(true); setNavOpen(false); }} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
               <MessageSquare size={14} /> Explain the data
@@ -703,7 +718,10 @@ export default function Dashboard({ user, onLogout }) {
               <button onClick={() => setShowQuality(false)}><X size={18} className="text-text-dim" /></button>
             </div>
             <p className="text-xs text-text-muted mb-3">
-              Rule-based checks against the current data: implausible scores, likely swapped room-number/score fields, answers that contradict a stated risk level, and possible duplicate entries. This flags rows worth a human look — it can't independently confirm what actually happened in a room, only that something about the entry looks inconsistent.
+              Rule-based checks that run continuously — on server start, hourly, and immediately after every new audit is submitted. They catch implausible scores, likely swapped room-number/score fields, room numbers matching no unit, answers that contradict a stated risk level, and possible duplicates. This flags rows worth a human look; it can't confirm what actually happened in a room, only that something about the entry looks inconsistent.
+              {qualityLastRun && (
+                <span className="block mt-1 text-text-dim">Last checked {new Date(qualityLastRun).toLocaleString()}.</span>
+              )}
             </p>
             {qualityCounts && (
               <div className="bg-surface-2 border border-rule rounded px-3 py-2 mb-3 text-xs text-text-muted flex flex-wrap gap-x-4 gap-y-1">

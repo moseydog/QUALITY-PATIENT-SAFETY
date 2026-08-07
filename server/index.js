@@ -28,4 +28,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`QI dashboard server running on port ${PORT}`);
+  const mins = Number(process.env.QUALITY_CHECK_MINUTES) || 60;
+  require('./quality').startScheduler(mins);
 });
