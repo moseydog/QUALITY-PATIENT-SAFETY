@@ -108,7 +108,26 @@ router.get('/stats/monthly-table', (req, res) => {
     return { key: m.key, label: m.label, category: m.category, byMonth };
   });
   const months = Array.from(new Set(out.flatMap((m) => Object.keys(m.byMonth)))).sort();
-  res.json({ months, metrics: out });
+
+  // The number of distinct AUDITS contributing to each category per month.
+  // This is deliberately not the sum of per-metric answer counts: one audit
+  // answers several questions, so summing them inflates n several-fold and
+  // would make any confidence interval built on it far too narrow.
+  const categoryAudits = {};
+  ['fall', 'hapi', 'education'].forEach((cat) => {
+    const keys = METRICS.filter((m) => m.category === cat && !m.reference).map((m) => m.key);
+    if (keys.length === 0) { categoryAudits[cat] = {}; return; }
+    const anyAnswered = keys.map((k) => `${k} IS NOT NULL`).join(' OR ');
+    const rows = db.prepare(
+      `SELECT substr(audit_date,1,7) as month, COUNT(*) as audits
+       FROM audit_visits
+       WHERE audit_date IS NOT NULL AND ${SCOPE_SQL} AND (${anyAnswered})
+       GROUP BY month ORDER BY month`
+    ).all();
+    categoryAudits[cat] = Object.fromEntries(rows.map((r) => [r.month, r.audits]));
+  });
+
+  res.json({ months, metrics: out, categoryAudits });
 });
 
 // Rule-based data-quality checks - flags rows worth a human's review rather
@@ -411,26 +430,35 @@ router.get('/stats/by-unit/:unit/monthly', (req, res) => {
       });
     });
 
+    // Distinct audits for this unit/month/category, queried directly rather
+    // than summed across metrics - summing per-metric answer counts inflates
+    // n several-fold and would understate the uncertainty.
+    const anyAnswered = catMetrics.map((m) => `${m.key} IS NOT NULL`).join(' OR ');
+    const auditRows = db.prepare(
+      `SELECT substr(audit_date,1,7) as month, COUNT(*) as audits FROM audit_visits
+       WHERE audit_date IS NOT NULL AND ${SCOPE_SQL} AND ${roomPredicate} AND (${anyAnswered})
+       GROUP BY month`
+    ).all(...roomParams);
+    const auditsByMonth = Object.fromEntries(auditRows.map((r) => [r.month, r.audits]));
+
     const series = allMonths.map((month) => {
       let totalWeight = 0;
       let weightedSum = 0;
-      let sampleTotal = 0;
-      let sampleCompliant = 0;
+      let metricsContributing = 0;
       catMetrics.forEach((m) => {
         const cell = perMetricByMonth[m.key][month];
         if (cell) {
           const pct = (cell.compliant / cell.total) * 100;
           totalWeight += m.weight;
           weightedSum += pct * m.weight;
-          sampleTotal += cell.total;
-          sampleCompliant += cell.compliant;
+          metricsContributing += 1;
         }
       });
       return {
         month,
         pct: totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) / 10 : null,
-        total: sampleTotal,
-        compliant: sampleCompliant,
+        audits: auditsByMonth[month] || 0,
+        metricsContributing,
       };
     });
     categories[cat] = series;

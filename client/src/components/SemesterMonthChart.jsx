@@ -18,15 +18,26 @@ const KIND_STYLE = {
   other: { band: '#52626e', label: 'Note' },
 };
 
-function RunChartTooltip({ active, payload, label }) {
+function RunChartTooltip({ active, payload, label, composite }) {
   if (!active || !payload || !payload.length) return null;
   const point = payload.find((p) => p.dataKey === 'pct');
   if (!point || point.value === null || point.value === undefined) return null;
-  const { low, high, total } = point.payload;
+  const { low, high, total, audits, metricsContributing } = point.payload;
   return (
     <div className="bg-surface border border-rule px-2 py-1.5 text-xs shadow-sm">
       <div className="text-text-muted">{label}</div>
-      <div className="font-semibold text-ink">{point.value}% <span className="font-normal text-text-muted">(95% CI {low}–{high}, n={total})</span></div>
+      {composite ? (
+        <div className="font-semibold text-ink">
+          {point.value}%{' '}
+          <span className="font-normal text-text-muted">
+            (weighted across {metricsContributing} metrics · {audits} audits)
+          </span>
+        </div>
+      ) : (
+        <div className="font-semibold text-ink">
+          {point.value}% <span className="font-normal text-text-muted">(95% CI {low}–{high}, n={total})</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -46,10 +57,22 @@ export default function SemesterMonthChart({ label, months, series, target, big 
   const seriesByMonth = {};
   series.forEach((s) => { seriesByMonth[s.month] = s; });
 
+  // A category series is a weighted blend of several different proportions,
+  // not a single binomial one - so a Wilson interval simply doesn't apply to
+  // it. Composite series get no confidence band; per-metric series, which
+  // ARE a single proportion, still do.
+  const composite = series.some((s) => s.metricsContributing !== undefined);
+
   const data = months.map((mo) => {
     const cell = seriesByMonth[mo];
     if (!cell || cell.pct === null || cell.pct === undefined) {
       return { month: monthAbbr(mo), pct: null, low: null, high: null, total: 0, band: null };
+    }
+    if (composite) {
+      return {
+        month: monthAbbr(mo), pct: cell.pct, low: null, high: null, band: null,
+        audits: cell.audits, metricsContributing: cell.metricsContributing,
+      };
     }
     const ci = wilsonInterval(cell.compliant, cell.total);
     return { month: monthAbbr(mo), pct: cell.pct, low: ci.low, high: ci.high, total: cell.total, band: [ci.low, ci.high] };
@@ -58,7 +81,9 @@ export default function SemesterMonthChart({ label, months, series, target, big 
   const first = withData[0];
   const last = withData[withData.length - 1];
   const delta = first && last && first !== last ? Math.round((last.pct - first.pct) * 10) / 10 : null;
-  const values = data.flatMap((d) => (d.pct !== null ? [d.low, d.high] : []));
+  const values = composite
+    ? withData.map((d) => d.pct)
+    : data.flatMap((d) => (d.pct !== null ? [d.low, d.high] : []));
   const boundsForScale = showGoal ? [...values, target] : values;
   const { ticks, domain } = values.length ? niceTicks(Math.min(...boundsForScale), Math.max(...boundsForScale)) : { ticks: [0, 50, 100], domain: [0, 100] };
 
@@ -109,8 +134,8 @@ export default function SemesterMonthChart({ label, months, series, target, big 
                 <Label value="Goal" position="insideTopRight" fontSize={9} fill="#52626e" />
               </ReferenceLine>
             )}
-            <Tooltip content={<RunChartTooltip />} />
-            <Area dataKey="band" stroke="none" fill="#3d6690" fillOpacity={0.12} connectNulls isAnimationActive={false} />
+            <Tooltip content={<RunChartTooltip composite={composite} />} />
+            {!composite && <Area dataKey="band" stroke="none" fill="#3d6690" fillOpacity={0.12} connectNulls isAnimationActive={false} />}
             <Line type="linear" dataKey="pct" stroke="#12283b" strokeWidth={2.25} dot={{ r: 3.5, fill: '#12283b', strokeWidth: 0 }} activeDot={{ r: 5 }} connectNulls isAnimationActive={false} />
           </ComposedChart>
         </ResponsiveContainer>

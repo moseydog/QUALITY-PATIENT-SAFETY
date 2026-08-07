@@ -314,26 +314,28 @@ export default function Dashboard({ user, onLogout }) {
   function categoryMonthlySeries(cat) {
     if (!monthlyData) return [];
     const catMetrics = withStatus.filter((m) => m.category === cat && !m.reference);
+    const audits = (monthlyData.categoryAudits && monthlyData.categoryAudits[cat]) || {};
     return monthlyData.months.map((month) => {
       let totalWeight = 0;
       let weightedSum = 0;
-      let sampleTotal = 0;
-      let sampleCompliant = 0;
+      let metricsContributing = 0;
       catMetrics.forEach((m) => {
         const full = monthlyData.metrics.find((x) => x.key === m.key);
         const cell = full ? full.byMonth[month] : undefined;
         if (cell) {
           totalWeight += m.weight;
           weightedSum += cell.pct * m.weight;
-          sampleTotal += cell.total;
-          sampleCompliant += cell.compliant;
+          metricsContributing += 1;
         }
       });
       return {
         month,
         pct: totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) / 10 : null,
-        total: sampleTotal,
-        compliant: sampleCompliant,
+        // Distinct audits, not the sum of per-metric answers. One audit
+        // answers several questions; summing them inflated n roughly
+        // metric-fold and made the old confidence band far too narrow.
+        audits: audits[month] || 0,
+        metricsContributing,
       };
     });
   }
