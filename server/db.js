@@ -104,6 +104,21 @@ db.exec(`
     metric_key TEXT PRIMARY KEY,
     target_value INTEGER NOT NULL
   );
+
+  -- Contextual events that explain WHY the numbers moved - staffing changes,
+  -- leadership interventions, process changes. Annotating run charts with the
+  -- events behind a shift is standard QI practice: without it, a reader sees
+  -- a dip and has no way to tell a real care problem from a staffing gap.
+  CREATE TABLE IF NOT EXISTS annotations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    start_month TEXT NOT NULL,
+    end_month TEXT NOT NULL,
+    scope TEXT NOT NULL DEFAULT 'all',
+    kind TEXT NOT NULL DEFAULT 'other',
+    title TEXT NOT NULL,
+    detail TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // Known-bad data corrections that run every boot, on any disk - not just
@@ -156,6 +171,28 @@ const targetCount = db.prepare('SELECT COUNT(*) as c FROM targets').get().c;
 if (targetCount === 0) {
   const insertTarget = db.prepare('INSERT INTO targets (metric_key, target_value) VALUES (?, ?)');
   METRICS.forEach((m) => insertTarget.run(m.key, m.target));
+}
+
+// Seed the known program events on first run only. These are real, documented
+// context for the visible shifts in the data. Seeded once and never re-applied,
+// so anything edited or deleted in the app stays that way.
+const annotationCount = db.prepare('SELECT COUNT(*) as c FROM annotations').get().c;
+if (annotationCount === 0) {
+  const insertAnnotation = db.prepare(
+    'INSERT INTO annotations (start_month, end_month, scope, kind, title, detail) VALUES (?, ?, ?, ?, ?, ?)'
+  );
+  [
+    {
+      start: '2025-11', end: '2025-12', scope: 'hapi', kind: 'intervention',
+      title: 'Findings shared with hospital leadership',
+      detail: 'Audit results were presented to hospital leadership, who intervened to address the drop in HAPI prevention adherence.',
+    },
+    {
+      start: '2026-01', end: '2026-04', scope: 'education', kind: 'staffing',
+      title: 'Volunteer director departed — roster fell from ~52 to ~20',
+      detail: 'The volunteer director left at the start of the spring semester, disrupting scheduling and onboarding. The team shrank from roughly 52 volunteers to about 20, and shift call-outs rose. With the program understaffed, daily patient education was delivered inconsistently — the most likely explanation for the drop in patient understanding scores through the spring, and especially in April.',
+    },
+  ].forEach((a) => insertAnnotation.run(a.start, a.end, a.scope, a.kind, a.title, a.detail));
 }
 
 module.exports = db;

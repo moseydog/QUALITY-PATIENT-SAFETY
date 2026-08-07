@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  ComposedChart, Line, Area, XAxis, YAxis, ReferenceLine, CartesianGrid,
+  ComposedChart, Line, Area, XAxis, YAxis, ReferenceLine, ReferenceArea, CartesianGrid,
   ResponsiveContainer, Tooltip, Label,
 } from 'recharts';
 import { wilsonInterval, niceTicks } from '../lib/chartMath';
@@ -9,6 +9,14 @@ function monthAbbr(ym) {
   const [y, m] = ym.split('-').map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short' });
 }
+
+const KIND_STYLE = {
+  staffing: { band: '#b8860b', label: 'Staffing' },
+  intervention: { band: '#2c6b4f', label: 'Intervention' },
+  process: { band: '#3d6690', label: 'Process change' },
+  external: { band: '#7a5c8d', label: 'External' },
+  other: { band: '#52626e', label: 'Note' },
+};
 
 function RunChartTooltip({ active, payload, label }) {
   if (!active || !payload || !payload.length) return null;
@@ -29,7 +37,12 @@ function RunChartTooltip({ active, payload, label }) {
 // actually active that term, not to invite a Fall-vs-Spring read, which
 // would conflate too many other differences (cohort, patients, program
 // maturity) to mean anything reliable.
-export default function SemesterMonthChart({ label, months, series, target, big = false, showGoal = true }) {
+//
+// `annotations` overlay real program events (staffing changes, leadership
+// interventions) onto the months they affected - annotating run charts with
+// the events behind a shift is standard QI practice, and without it a reader
+// can't tell a care problem from a staffing gap.
+export default function SemesterMonthChart({ label, months, series, target, big = false, showGoal = true, annotations = [] }) {
   const seriesByMonth = {};
   series.forEach((s) => { seriesByMonth[s.month] = s; });
 
@@ -51,6 +64,17 @@ export default function SemesterMonthChart({ label, months, series, target, big 
 
   if (withData.length === 0) return null; // nothing tracked this semester - omit rather than show an empty chart
 
+  // Only annotations that actually overlap this semester's months, clipped to
+  // the visible window so a multi-month event doesn't run off the chart edge.
+  const visible = annotations
+    .map((a, i) => {
+      const overlap = months.filter((m) => m >= a.start_month && m <= a.end_month);
+      if (overlap.length === 0) return null;
+      return { ...a, from: monthAbbr(overlap[0]), to: monthAbbr(overlap[overlap.length - 1]) };
+    })
+    .filter(Boolean)
+    .map((a, i) => ({ ...a, num: i + 1 }));
+
   return (
     <div className={`bg-surface border border-rule rounded ${big ? 'p-4' : 'p-3'}`}>
       <div className="flex items-baseline justify-between gap-2 mb-2">
@@ -63,6 +87,21 @@ export default function SemesterMonthChart({ label, months, series, target, big 
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 10, right: 14, left: 4, bottom: 0 }}>
             <CartesianGrid stroke="#e4e8eb" strokeDasharray="0" vertical={false} />
+            {visible.map((a) => (
+              <ReferenceArea
+                key={`ann-${a.id}`}
+                x1={a.from}
+                x2={a.to}
+                fill={(KIND_STYLE[a.kind] || KIND_STYLE.other).band}
+                fillOpacity={0.09}
+                stroke={(KIND_STYLE[a.kind] || KIND_STYLE.other).band}
+                strokeOpacity={0.35}
+                strokeDasharray="3 3"
+                ifOverflow="extendDomain"
+              >
+                <Label value={a.num} position="insideTopLeft" fontSize={10} fontWeight={700} fill={(KIND_STYLE[a.kind] || KIND_STYLE.other).band} offset={6} />
+              </ReferenceArea>
+            ))}
             <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#52626e' }} axisLine={{ stroke: '#d7dce1' }} tickLine={false} interval={0} />
             <YAxis domain={domain} ticks={ticks} tick={{ fontSize: 10, fill: '#52626e' }} width={34} axisLine={false} tickLine={false} />
             {showGoal && (
@@ -76,6 +115,19 @@ export default function SemesterMonthChart({ label, months, series, target, big 
           </ComposedChart>
         </ResponsiveContainer>
       </div>
+      {visible.length > 0 && (
+        <ul className="mt-2 space-y-1 border-t border-rule pt-2">
+          {visible.map((a) => (
+            <li key={a.id} className="text-[11px] text-text-muted flex gap-1.5">
+              <span className="font-bold flex-shrink-0" style={{ color: (KIND_STYLE[a.kind] || KIND_STYLE.other).band }}>{a.num}</span>
+              <span>
+                <span className="font-medium text-ink">{a.title}</span>
+                {a.detail ? <span className="text-text-dim"> — {a.detail}</span> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

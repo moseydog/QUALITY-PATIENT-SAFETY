@@ -12,6 +12,7 @@ app.use(cookieParser());
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/visits', require('./routes/visits'));
 app.use('/api/targets', require('./routes/targets'));
+app.use('/api/annotations', require('./routes/annotations'));
 app.use('/api/users', require('./routes/users'));
 
 // Serve the built frontend

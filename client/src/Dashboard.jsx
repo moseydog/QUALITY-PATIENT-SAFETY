@@ -5,11 +5,12 @@ import {
 } from 'recharts';
 import {
   Plus, X, Trash2, Users, KeyRound, Settings, TrendingUp, TrendingDown,
-  AlertTriangle, ShieldCheck, Menu,
+  AlertTriangle, ShieldCheck, Menu, MessageSquare,
 } from 'lucide-react';
 import AddVisitModal from './components/AddVisitModal.jsx';
 import SemesterMonthChart from './components/SemesterMonthChart.jsx';
 import UnitsTab from './components/UnitsTab.jsx';
+import AnnotationsModal from './components/AnnotationsModal.jsx';
 import StratifiedFindings from './components/StratifiedFindings.jsx';
 
 const CATEGORY_META = {
@@ -120,6 +121,8 @@ export default function Dashboard({ user, onLogout }) {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showQuality, setShowQuality] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [annotations, setAnnotations] = useState([]);
+  const [showAnnotations, setShowAnnotations] = useState(false);
   const [qualityIssues, setQualityIssues] = useState(null);
   const [qualityCounts, setQualityCounts] = useState(null);
   const [monthlyData, setMonthlyData] = useState(null);
@@ -141,6 +144,7 @@ export default function Dashboard({ user, onLogout }) {
     setRecentVisits(await api(`/api/visits${q}`));
   }
   async function refetchMonthly() { setMonthlyData(await api('/api/visits/stats/monthly-table')); }
+  async function refetchAnnotations() { setAnnotations(await api('/api/annotations')); }
   async function runQualityCheck() {
     if (!isAdmin) return;
     const data = await api('/api/visits/quality-check');
@@ -151,7 +155,7 @@ export default function Dashboard({ user, onLogout }) {
   useEffect(() => {
     (async () => {
       try {
-        await Promise.all([refetchSummary(), refetchUsers(), refetchVisits(), refetchMonthly()]);
+        await Promise.all([refetchSummary(), refetchUsers(), refetchVisits(), refetchMonthly(), refetchAnnotations()]);
       } catch (e) { /* handled by empty states */ }
       setLoading(false);
     })();
@@ -196,6 +200,25 @@ export default function Dashboard({ user, onLogout }) {
   async function handleClearAll() {
     try { await api('/api/visits/all', { method: 'DELETE' }); await Promise.all([refetchSummary(), refetchVisits(monthFilter), refetchMonthly()]); } catch (e) { /* ignore */ }
     setShowClearConfirm(false);
+  }
+
+  const [annotationError, setAnnotationError] = useState(null);
+
+  async function handleSaveAnnotation(draft, editingId) {
+    setAnnotationError(null);
+    try {
+      await api(editingId ? `/api/annotations/${editingId}` : '/api/annotations', {
+        method: editingId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(draft),
+      });
+      await refetchAnnotations();
+      return true;
+    } catch (e) { setAnnotationError(e.message); return false; }
+  }
+
+  async function handleDeleteAnnotation(id) {
+    try { await api(`/api/annotations/${id}`, { method: 'DELETE' }); await refetchAnnotations(); } catch (e) { /* ignore */ }
   }
 
   async function handleAddUser() {
@@ -281,6 +304,11 @@ export default function Dashboard({ user, onLogout }) {
       const cell = full.byMonth[month];
       return cell ? { month, pct: cell.pct, compliant: cell.compliant, total: cell.total } : { month, pct: null, compliant: 0, total: 0 };
     });
+  }
+
+  // Annotations relevant to a category: scope 'all' applies everywhere.
+  function annotationsFor(cat) {
+    return annotations.filter((a) => a.scope === 'all' || a.scope === cat);
   }
 
   function categoryMonthlySeries(cat) {
@@ -384,6 +412,9 @@ export default function Dashboard({ user, onLogout }) {
             <button onClick={() => { setShowQuality(true); runQualityCheck(); setNavOpen(false); }} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
               <ShieldCheck size={14} /> Data quality
             </button>
+            <button onClick={() => { setShowAnnotations(true); setNavOpen(false); }} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
+              <MessageSquare size={14} /> Explain the data
+            </button>
             <button onClick={() => { setShowUsers(true); setNavOpen(false); }} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
               <Users size={14} /> Manage users
             </button>
@@ -480,7 +511,7 @@ export default function Dashboard({ user, onLogout }) {
                 <h2 className="text-sm font-semibold text-ink mb-2">Fall 2025 semester — month over month (Sep, Oct, Nov, Dec)</h2>
                 <div className="grid md:grid-cols-3 gap-3">
                   {['fall', 'hapi', 'education'].map((cat) => (
-                    <SemesterMonthChart key={cat} label={CATEGORY_META[cat].label} months={FALL_MONTHS} series={categoryMonthlySeries(cat)} target={categoryWeightedTarget(cat)} showGoal={cat !== 'education'} big />
+                    <SemesterMonthChart key={cat} label={CATEGORY_META[cat].label} months={FALL_MONTHS} series={categoryMonthlySeries(cat)} target={categoryWeightedTarget(cat)} showGoal={cat !== 'education'} annotations={annotationsFor(cat)} big />
                   ))}
                 </div>
               </div>
@@ -488,7 +519,7 @@ export default function Dashboard({ user, onLogout }) {
                 <h2 className="text-sm font-semibold text-ink mb-2">Spring 2026 semester — month over month (Jan, Feb, Mar, Apr)</h2>
                 <div className="grid md:grid-cols-3 gap-3">
                   {['fall', 'hapi', 'education'].map((cat) => (
-                    <SemesterMonthChart key={cat} label={CATEGORY_META[cat].label} months={SPRING_MONTHS} series={categoryMonthlySeries(cat)} target={categoryWeightedTarget(cat)} showGoal={cat !== 'education'} big />
+                    <SemesterMonthChart key={cat} label={CATEGORY_META[cat].label} months={SPRING_MONTHS} series={categoryMonthlySeries(cat)} target={categoryWeightedTarget(cat)} showGoal={cat !== 'education'} annotations={annotationsFor(cat)} big />
                   ))}
                 </div>
               </div>
@@ -530,7 +561,7 @@ export default function Dashboard({ user, onLogout }) {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {catMetrics.filter((m) => !m.reference).map((m) => (
-                      <SemesterMonthChart key={m.key} label={m.label} months={FALL_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} showGoal={activeTab !== 'education'} />
+                      <SemesterMonthChart key={m.key} label={m.label} months={FALL_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} showGoal={activeTab !== 'education'} annotations={annotationsFor(activeTab)} />
                     ))}
                   </div>
                 )}
@@ -542,7 +573,7 @@ export default function Dashboard({ user, onLogout }) {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {catMetrics.filter((m) => !m.reference).map((m) => (
-                      <SemesterMonthChart key={m.key} label={m.label} months={SPRING_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} showGoal={activeTab !== 'education'} />
+                      <SemesterMonthChart key={m.key} label={m.label} months={SPRING_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} showGoal={activeTab !== 'education'} annotations={annotationsFor(activeTab)} />
                     ))}
                   </div>
                 )}
@@ -647,6 +678,16 @@ export default function Dashboard({ user, onLogout }) {
         )}
       </div>
       </main>
+
+      {showAnnotations && isAdmin && (
+        <AnnotationsModal
+          annotations={annotations}
+          onClose={() => { setShowAnnotations(false); setAnnotationError(null); }}
+          onSave={handleSaveAnnotation}
+          onDelete={handleDeleteAnnotation}
+          error={annotationError}
+        />
+      )}
 
       {showAddVisit && (
         <AddVisitModal onClose={() => setShowAddVisit(false)} onSave={handleSaveVisit} error={addVisitError} />
