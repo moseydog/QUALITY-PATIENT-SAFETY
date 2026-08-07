@@ -92,13 +92,12 @@ export default function SemesterMonthChart({ label, months, series, target, big 
   // Only annotations that actually overlap this semester's months, clipped to
   // the visible window so a multi-month event doesn't run off the chart edge.
   const visible = annotations
-    .map((a, i) => {
+    .map((a) => {
       const overlap = months.filter((m) => m >= a.start_month && m <= a.end_month);
       if (overlap.length === 0) return null;
       return { ...a, from: monthAbbr(overlap[0]), to: monthAbbr(overlap[overlap.length - 1]) };
     })
-    .filter(Boolean)
-    .map((a, i) => ({ ...a, num: i + 1 }));
+    .filter(Boolean);
 
   return (
     <div className={`bg-surface border border-rule rounded ${big ? 'p-4' : 'p-3'}`}>
@@ -123,9 +122,7 @@ export default function SemesterMonthChart({ label, months, series, target, big 
                 strokeOpacity={0.35}
                 strokeDasharray="3 3"
                 ifOverflow="extendDomain"
-              >
-                <Label value={a.num} position="insideTopLeft" fontSize={10} fontWeight={700} fill={(KIND_STYLE[a.kind] || KIND_STYLE.other).band} offset={6} />
-              </ReferenceArea>
+              />
             ))}
             <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#52626e' }} axisLine={{ stroke: '#d7dce1' }} tickLine={false} interval={0} />
             <YAxis domain={domain} ticks={ticks} tick={{ fontSize: 10, fill: '#52626e' }} width={34} axisLine={false} tickLine={false} />
@@ -144,7 +141,11 @@ export default function SemesterMonthChart({ label, months, series, target, big 
         <ul className="mt-2 space-y-1 border-t border-rule pt-2">
           {visible.map((a) => (
             <li key={a.id} className="text-[11px] text-text-muted flex gap-1.5">
-              <span className="font-bold flex-shrink-0" style={{ color: (KIND_STYLE[a.kind] || KIND_STYLE.other).band }}>{a.num}</span>
+              <span
+                className="mt-1 h-2 w-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: (KIND_STYLE[a.kind] || KIND_STYLE.other).band }}
+                aria-hidden="true"
+              />
               <span>
                 <span className="font-medium text-ink">{a.title}</span>
                 {a.detail ? <span className="text-text-dim"> — {a.detail}</span> : null}
