@@ -325,11 +325,16 @@ export default function Dashboard({ user, onLogout }) {
   }
 
   // A metric chart shows its own metric-specific note if one exists, plus any
-  // category-wide notes that apply to it.
+  // category-wide notes that aren't already covered by a specific one. The
+  // title match is what prevents the general "shared with leadership" note
+  // doubling up under a chart that already has its own worded version.
   function annotationsForMetric(metricKey, cat) {
-    return annotations.filter((a) => (
-      a.metric_key === metricKey || (!a.metric_key && (a.scope === 'all' || a.scope === cat))
+    const specific = annotations.filter((a) => a.metric_key === metricKey);
+    const covered = new Set(specific.map((a) => a.title));
+    const general = annotations.filter((a) => (
+      !a.metric_key && (a.scope === 'all' || a.scope === cat) && !covered.has(a.title)
     ));
+    return [...specific, ...general];
   }
 
   function categoryMonthlySeries(cat) {

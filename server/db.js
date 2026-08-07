@@ -211,6 +211,10 @@ const insertAnnotation = db.prepare(
 );
 if (annotationCount === 0) {
   [
+    {
+      start: '2025-11', end: '2025-12', scope: 'hapi', kind: 'intervention', metric_key: null,
+      title: LEADERSHIP_TITLE, detail: GENERIC_LEADERSHIP_DETAIL,
+    },
     ...leadershipRows(),
     {
       start: '2026-01', end: '2026-04', scope: 'education', kind: 'staffing', metric_key: null,
@@ -219,18 +223,35 @@ if (annotationCount === 0) {
     },
   ].forEach((a) => insertAnnotation.run(a.start, a.end, a.scope, a.kind, a.metric_key, a.title, a.detail));
 } else {
-  // Existing deployment: replace the single blanket HAPI note with per-metric
-  // ones, but ONLY if it's still exactly as seeded - if it was edited, that's
-  // a deliberate choice and gets left alone.
+  // Existing deployment: add per-metric notes alongside the general one, but
+  // only once - guarded on whether any per-metric HAPI note already exists,
+  // otherwise this re-inserts a duplicate set on every single boot.
+  const alreadyPerMetric = db.prepare(
+    `SELECT id FROM annotations WHERE metric_key IS NOT NULL AND scope='hapi' AND title=?`
+  ).get(LEADERSHIP_TITLE);
   const generic = db.prepare(
     `SELECT id FROM annotations WHERE metric_key IS NULL AND scope='hapi' AND title=? AND detail=?`
   ).get(LEADERSHIP_TITLE, GENERIC_LEADERSHIP_DETAIL);
-  if (generic) {
-    db.prepare('DELETE FROM annotations WHERE id = ?').run(generic.id);
+  if (generic && !alreadyPerMetric) {
     leadershipRows().forEach((a) => insertAnnotation.run(a.start, a.end, a.scope, a.kind, a.metric_key, a.title, a.detail));
     // eslint-disable-next-line no-console
-    console.log('Expanded the general HAPI leadership note into per-metric notes.');
+    console.log('Added per-metric HAPI leadership notes alongside the general one.');
   }
+}
+
+// The category-level HAPI chart on Overview needs its own general note - the
+// per-metric notes only attach to individual metric charts, so without this
+// the blended HAPI chart would show no context at all.
+const hasGeneralHapi = db.prepare(
+  `SELECT id FROM annotations WHERE metric_key IS NULL AND scope='hapi' AND title=?`
+).get(LEADERSHIP_TITLE);
+const hasPerMetricHapi = db.prepare(
+  `SELECT id FROM annotations WHERE metric_key IS NOT NULL AND scope='hapi' AND title=?`
+).get(LEADERSHIP_TITLE);
+if (!hasGeneralHapi && hasPerMetricHapi) {
+  insertAnnotation.run('2025-11', '2025-12', 'hapi', 'intervention', null, LEADERSHIP_TITLE, GENERIC_LEADERSHIP_DETAIL);
+  // eslint-disable-next-line no-console
+  console.log('Restored the category-level HAPI leadership note for the Overview chart.');
 }
 
 module.exports = db;
