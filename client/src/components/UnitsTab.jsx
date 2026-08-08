@@ -36,7 +36,7 @@ function UnitDetail({ unitName }) {
       <div>
         <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">Where this unit's compliance score comes from</h4>
         <p className="text-xs text-text-dim mb-2">Latest available month per metric, most recent audits for this unit. Weight shows how much each metric counts toward the category score above.</p>
-        <div className="bg-surface border border-rule rounded overflow-x-auto">
+        <div className="bg-surface border border-rule rounded-md shadow-[0_1px_2px_rgba(18,40,59,0.04)] overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-ink text-text-muted text-xs uppercase tracking-wide">
@@ -98,17 +98,17 @@ export default function UnitsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center">
-        <span className="bg-ink text-paper text-[10px] font-semibold px-2 py-0.5">QPS</span>
-        <span className="bg-surface text-ink text-[10px] font-medium px-2 py-0.5">Units</span>
-      </div>
-      <div>
-        <h2 className="text-sm font-semibold text-ink">Compliance by unit</h2>
-        <p className="text-xs text-text-dim">
+      <header className="border-b border-rule pb-5">
+        <div className="flex items-center gap-2 mb-2.5">
+          <span className="bg-ink text-paper text-[10px] font-semibold tracking-wide px-2 py-0.5 rounded-sm">QPS</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-dim">By unit</span>
+        </div>
+        <h1 className="text-2xl font-bold text-ink tracking-tight">Compliance by unit</h1>
+        <p className="text-sm text-text-muted mt-1.5 max-w-3xl">
           Falls and HAPI columns are weighted compliance rates — the % of audits in that unit meeting the standard for each category, computed the same way as the main tabs, across the full analyzed range ({data.scopeRange}). Click a unit for its month-over-month detail.
         </p>
-      </div>
-      <div className="bg-surface border border-rule rounded overflow-x-auto">
+      </header>
+      <div className="bg-surface border border-rule rounded-md shadow-[0_1px_2px_rgba(18,40,59,0.04)] overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b-2 border-ink text-text-muted text-xs uppercase tracking-wide">

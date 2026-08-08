@@ -59,7 +59,7 @@ function MetricCard({ metric, selected, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`text-left p-4 bg-surface border rounded transition ${selected ? 'border-ink ring-1 ring-ink' : 'border-rule hover:border-text-dim'}`}
+      className={`text-left p-4 bg-surface border rounded-md transition-all duration-200 ${selected ? 'border-ink ring-1 ring-ink shadow-[0_4px_14px_rgba(18,40,59,0.09)]' : 'border-rule shadow-[0_1px_2px_rgba(18,40,59,0.04)] hover:shadow-[0_4px_14px_rgba(18,40,59,0.09)] hover:border-text-dim'}`}
     >
       <div className="text-[10px] font-semibold uppercase tracking-wide text-text-dim mb-0.5">Compliance score</div>
       <div className="text-xs font-medium text-text-muted mb-1 leading-snug flex items-center gap-1.5">
@@ -90,7 +90,7 @@ function MetricCard({ metric, selected, onClick }) {
 function BelowTargetList({ list }) {
   if (list.length === 0) return <p className="text-sm text-text-dim">Everything here is meeting target for the latest month.</p>;
   return (
-    <div className="bg-surface border border-rule divide-y divide-rule">
+    <div className="bg-surface border border-rule rounded-md shadow-[0_1px_2px_rgba(18,40,59,0.04)] divide-y divide-rule overflow-hidden">
       {list.map((m) => (
         <div key={m.key} className="flex items-center justify-between px-4 py-2.5 text-sm">
           <span className="text-ink">{m.label}</span>
@@ -415,7 +415,7 @@ export default function Dashboard({ user, onLogout }) {
     <>
       <div className="p-5 border-b border-panel-rule">
         <span className="bg-panel-text text-panel text-xs font-bold px-2 py-1 rounded">QPS</span>
-        <h1 className="text-sm font-semibold mt-2.5 leading-snug">Quality and Patient Safety Volunteer Program</h1>
+        <h1 className="text-sm font-semibold mt-3 leading-snug tracking-tight">Quality and Patient Safety Volunteer Program</h1>
         <p className="text-[11px] text-panel-muted mt-1">Hospital #1</p>
       </div>
       <nav className="flex-1 p-3 overflow-y-auto">
@@ -424,32 +424,32 @@ export default function Dashboard({ user, onLogout }) {
           <button
             key={tab}
             onClick={() => goToTab(tab)}
-            className={`w-full text-left px-2.5 py-2 rounded text-sm font-medium transition mb-0.5 ${
+            className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 mb-0.5 ${
               activeTab === tab ? 'bg-panel-2 text-panel-text' : 'text-panel-muted hover:bg-panel-2 hover:text-panel-text'
             }`}
           >
             {tabLabel(tab)}
           </button>
         ))}
-        <button onClick={() => { setShowAddVisit(true); setNavOpen(false); }} className="w-full mt-4 px-2.5 py-2 rounded text-sm font-semibold bg-panel-text text-panel flex items-center gap-1.5 justify-center">
+        <button onClick={() => { setShowAddVisit(true); setNavOpen(false); }} className="w-full mt-4 px-3 py-2.5 rounded-md text-sm font-semibold bg-panel-text text-panel flex items-center gap-1.5 justify-center hover:opacity-90 transition-opacity">
           <Plus size={14} /> Add visit
         </button>
         {isAdmin && (
           <>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-panel-muted px-2 mb-1.5 mt-5">Admin tools</p>
-            <button onClick={() => { setShowQuality(true); runQualityCheck(); setNavOpen(false); }} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
+            <button onClick={() => { setShowQuality(true); runQualityCheck(); setNavOpen(false); }} className="w-full text-left px-3 py-2 rounded-md text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2 transition-colors duration-150">
               <ShieldCheck size={14} /> Data quality
               {qualityCount > 0 && (
                 <span className="ml-auto bg-status-warn text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{qualityCount}</span>
               )}
             </button>
-            <button onClick={() => { setShowAnnotations(true); setNavOpen(false); }} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
+            <button onClick={() => { setShowAnnotations(true); setNavOpen(false); }} className="w-full text-left px-3 py-2 rounded-md text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2 transition-colors duration-150">
               <MessageSquare size={14} /> Explain the data
             </button>
-            <button onClick={() => { setShowUsers(true); setNavOpen(false); }} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
+            <button onClick={() => { setShowUsers(true); setNavOpen(false); }} className="w-full text-left px-3 py-2 rounded-md text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2 transition-colors duration-150">
               <Users size={14} /> Manage users
             </button>
-            <button onClick={() => { setShowSettings(true); setNavOpen(false); }} className="w-full text-left px-2.5 py-2 rounded text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2">
+            <button onClick={() => { setShowSettings(true); setNavOpen(false); }} className="w-full text-left px-3 py-2 rounded-md text-sm text-panel-muted hover:bg-panel-2 hover:text-panel-text flex items-center gap-2 transition-colors duration-150">
               <Settings size={14} /> Targets
             </button>
           </>
@@ -501,8 +501,19 @@ export default function Dashboard({ user, onLogout }) {
       <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8">
 
         {activeTab === 'overview' && (
-          <div className="space-y-8">
-            <div className="grid md:grid-cols-3 gap-3">
+          <div className="space-y-10">
+            <header className="border-b border-rule pb-5">
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="bg-ink text-paper text-[10px] font-semibold tracking-wide px-2 py-0.5 rounded-sm">QPS</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-dim">Hospital-wide overview</span>
+              </div>
+              <h1 className="text-2xl font-bold text-ink tracking-tight">Compliance across all audited units</h1>
+              <p className="text-sm text-text-muted mt-1.5 max-w-3xl">
+                Figures below combine every audited unit at Hospital&nbsp;#1. For a single unit's performance, open the Units tab.
+              </p>
+            </header>
+
+            <div className="grid md:grid-cols-3 gap-4">
               {['fall', 'hapi', 'education'].map((cat) => {
                 const list = byCategory[cat];
                 const countable = list.filter((m) => !m.reference);
@@ -512,18 +523,21 @@ export default function Dashboard({ user, onLogout }) {
                 const reportingMonth = scored.length ? scored[0].latestMonth : null;
                 return (
                   <button key={cat} onClick={() => setActiveTab(cat)}
-                    className="text-left p-5 bg-surface border border-rule hover:border-text-dim transition">
-                    <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${CATEGORY_META[cat].text}`}>{CATEGORY_META[cat].label}</div>
+                    className="group text-left p-5 bg-surface border border-rule rounded-md shadow-[0_1px_2px_rgba(18,40,59,0.04)] hover:shadow-[0_4px_14px_rgba(18,40,59,0.09)] hover:border-text-dim transition-all duration-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className={`text-[11px] font-semibold uppercase tracking-[0.1em] ${CATEGORY_META[cat].text}`}>{CATEGORY_META[cat].label}</span>
+                      <span className="text-text-dim opacity-0 group-hover:opacity-100 transition-opacity text-xs">→</span>
+                    </div>
                     {cat === 'education' ? (
                       <>
-                        <div className="text-sm text-text-muted">See month-over-month understanding trends</div>
-                        <div className="text-xs text-text-dim mt-1">{countable.length} knowledge questions tracked, by semester</div>
+                        <div className="text-base text-ink font-medium leading-snug">Month-over-month understanding trends</div>
+                        <div className="text-xs text-text-dim mt-2 pt-2 border-t border-rule">{countable.length} knowledge questions · tracked by semester</div>
                       </>
                     ) : (
                       <>
-                        <div className="text-[10px] font-semibold uppercase tracking-wide text-text-dim">Compliance score</div>
-                        <div className={`text-4xl font-bold ${scoreColorClass(avg)}`}>{avg !== null ? `${avg}%` : '—'}</div>
-                        <div className="text-xs text-text-dim mt-1">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-dim mb-0.5">Hospital-wide compliance score</div>
+                        <div className={`text-[2.75rem] leading-none font-bold tabular-nums tracking-tight ${scoreColorClass(avg)}`}>{avg !== null ? `${avg}%` : '—'}</div>
+                        <div className="text-xs text-text-dim mt-3 pt-2 border-t border-rule">
                           Weighted across {countable.length} metrics{reportingMonth ? ` · ${formatMonth(reportingMonth)}` : ''}{maxN ? ` · up to ${maxN} audits` : ''}
                         </div>
                       </>
@@ -532,31 +546,34 @@ export default function Dashboard({ user, onLogout }) {
                 );
               })}
             </div>
-            <div className="space-y-3">
-              <div className="flex items-center mb-2">
-                <span className="bg-ink text-paper text-[10px] font-semibold px-2 py-0.5">QPS</span>
-                <span className="bg-surface text-ink text-[10px] font-medium px-2 py-0.5">Since Program Start</span>
+
+            <div className="space-y-5">
+              <div className="border-b border-rule pb-3">
+                <h2 className="text-base font-semibold text-ink tracking-tight">Trend since program start</h2>
+                <p className="text-sm text-text-muted mt-1 max-w-3xl">Each semester's month-over-month change stands on its own — Fall and Spring aren't compared against each other, since the volunteer cohort, patient population, and program maturity all differ between them.</p>
               </div>
-              <p className="text-xs text-text-dim">Each semester's month-over-month change stands on its own — Fall and Spring aren't compared against each other, since the volunteer cohort, patient population, and program maturity all differ between them.</p>
               <div>
-                <h2 className="text-sm font-semibold text-ink mb-2">Fall 2025 semester — month over month (Sep, Oct, Nov, Dec)</h2>
-                <div className="grid md:grid-cols-3 gap-3">
+                <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-dim mb-3">Fall 2025 · Sep — Dec</h3>
+                <div className="grid md:grid-cols-3 gap-4">
                   {['fall', 'hapi', 'education'].map((cat) => (
                     <SemesterMonthChart key={cat} label={CATEGORY_META[cat].label} months={FALL_MONTHS} series={categoryMonthlySeries(cat)} target={categoryWeightedTarget(cat)} showGoal={cat !== 'education'} annotations={annotationsFor(cat)} big />
                   ))}
                 </div>
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-ink mb-2">Spring 2026 semester — month over month (Jan, Feb, Mar, Apr)</h2>
-                <div className="grid md:grid-cols-3 gap-3">
+                <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-dim mb-3">Spring 2026 · Jan — Apr</h3>
+                <div className="grid md:grid-cols-3 gap-4">
                   {['fall', 'hapi', 'education'].map((cat) => (
                     <SemesterMonthChart key={cat} label={CATEGORY_META[cat].label} months={SPRING_MONTHS} series={categoryMonthlySeries(cat)} target={categoryWeightedTarget(cat)} showGoal={cat !== 'education'} annotations={annotationsFor(cat)} big />
                   ))}
                 </div>
               </div>
             </div>
-            <div>
-              <h2 className="text-sm font-semibold text-ink mb-2">Needs attention</h2>
+            <div className="space-y-3">
+              <div className="border-b border-rule pb-3">
+                <h2 className="text-base font-semibold text-ink tracking-tight">Needs attention</h2>
+                <p className="text-sm text-text-muted mt-1">Metrics furthest below their goal in the most recent reporting month, hospital-wide.</p>
+              </div>
               <BelowTargetList list={belowTarget(withStatus).slice(0, 6)} />
             </div>
           </div>
@@ -564,33 +581,39 @@ export default function Dashboard({ user, onLogout }) {
 
         {catMetrics && (
           <div className="space-y-6">
-            <div className="flex items-center">
-              <span className="bg-ink text-paper text-[10px] font-semibold px-2 py-0.5">QPS</span>
-              <span className="bg-surface text-ink text-[10px] font-medium px-2 py-0.5">{CATEGORY_META[activeTab].label}</span>
-            </div>
+            <header className="border-b border-rule pb-5">
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="bg-ink text-paper text-[10px] font-semibold tracking-wide px-2 py-0.5 rounded-sm">QPS</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-dim">Hospital-wide</span>
+              </div>
+              <h1 className="text-2xl font-bold text-ink tracking-tight">{CATEGORY_META[activeTab].label}</h1>
+            </header>
 
             {activeTab === 'education' && (
-              <p className="text-sm text-text-muted">
+              <p className="text-sm text-text-muted max-w-3xl -mt-2">
                 Volunteers ask patients directly whether they understand pressure injuries — what they are, the risk factors, where they occur, and how to prevent them. This matters because patients who understand tend to advocate for their own care, like asking to be turned or have their heels offloaded — patients who don't understand often refuse care they don't see the reason for. This section exists because early data from the program showed most patients didn't actually know what a pressure injury was, which is the gap this education is meant to close.
               </p>
             )}
 
             {activeTab !== 'education' && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {catMetrics.filter((m) => !m.reference).map((m) => (
                   <MetricCard key={m.key} metric={m} selected={selectedMetric === m.key} onClick={() => setSelectedMetric(m.key)} />
                 ))}
               </div>
             )}
 
-            <div className="space-y-4">
-              <p className="text-xs text-text-dim">Each metric's month-over-month change stands on its own per semester — not compared against the other semester, since the volunteer cohort and program maturity differ between them.</p>
+            <div className="space-y-5">
+              <div className="border-b border-rule pb-3">
+                <h2 className="text-base font-semibold text-ink tracking-tight">Month-over-month by metric</h2>
+                <p className="text-sm text-text-muted mt-1 max-w-3xl">Each metric's change stands on its own per semester — not compared against the other semester, since the volunteer cohort and program maturity differ between them.</p>
+              </div>
               <div>
-                <h2 className="text-sm font-semibold text-ink mb-2">Fall 2025 — month over month by metric</h2>
+                <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-dim mb-3">Fall 2025 · Sep — Dec</h3>
                 {catMetrics.filter((m) => !m.reference).every((m) => metricMonthlySeries(m.key).every((s) => s.pct === null)) ? (
                   <p className="text-sm text-text-dim border border-dashed border-rule rounded p-4">Not tracked yet this semester.</p>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {catMetrics.filter((m) => !m.reference).map((m) => (
                       <SemesterMonthChart key={m.key} label={m.label} months={FALL_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} showGoal={activeTab !== 'education'} annotations={annotationsForMetric(m.key, activeTab)} />
                     ))}
@@ -598,11 +621,11 @@ export default function Dashboard({ user, onLogout }) {
                 )}
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-ink mb-2">Spring 2026 — month over month by metric</h2>
+                <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-dim mb-3">Spring 2026 · Jan — Apr</h3>
                 {catMetrics.filter((m) => !m.reference).every((m) => metricMonthlySeries(m.key).every((s) => s.pct === null)) ? (
                   <p className="text-sm text-text-dim border border-dashed border-rule rounded p-4">Not tracked yet this semester.</p>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {catMetrics.filter((m) => !m.reference).map((m) => (
                       <SemesterMonthChart key={m.key} label={m.label} months={SPRING_MONTHS} series={metricMonthlySeries(m.key)} target={m.target} showGoal={activeTab !== 'education'} annotations={annotationsForMetric(m.key, activeTab)} />
                     ))}
@@ -646,8 +669,10 @@ export default function Dashboard({ user, onLogout }) {
             )}
 
             {activeTab !== 'education' && (
-              <div>
-                <h2 className="text-sm font-semibold text-ink mb-2">Needs attention</h2>
+              <div className="space-y-3">
+                <div className="border-b border-rule pb-3">
+                  <h2 className="text-base font-semibold text-ink tracking-tight">Needs attention</h2>
+                </div>
                 <BelowTargetList list={belowTarget(catMetrics)} />
               </div>
             )}
@@ -661,19 +686,28 @@ export default function Dashboard({ user, onLogout }) {
         {activeTab === 'units' && <UnitsTab />}
 
         {activeTab === 'audits' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-ink">Individual audit visits</h2>
-              <select
-                value={monthFilter}
-                onChange={(e) => setMonthFilter(e.target.value)}
-                className="text-xs border border-rule rounded px-2 py-1 text-text-muted"
-              >
-                <option value="">Most recent 100</option>
-                {allMonths.slice().reverse().map((mo) => <option key={mo} value={mo}>{formatMonth(mo)}</option>)}
-              </select>
-            </div>
-            <div className="bg-surface border-t-2 border-b border-ink overflow-x-auto">
+          <div className="space-y-5">
+            <header className="border-b border-rule pb-5">
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="bg-ink text-paper text-[10px] font-semibold tracking-wide px-2 py-0.5 rounded-sm">QPS</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-dim">Audit log</span>
+              </div>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h1 className="text-2xl font-bold text-ink tracking-tight">Individual audit visits</h1>
+                  <p className="text-sm text-text-muted mt-1.5">Every room-visit audit recorded within the analyzed range.</p>
+                </div>
+                <select
+                  value={monthFilter}
+                  onChange={(e) => setMonthFilter(e.target.value)}
+                  className="text-sm border border-rule rounded-md px-3 py-2 text-text-muted"
+                >
+                  <option value="">Most recent 100</option>
+                  {allMonths.slice().reverse().map((mo) => <option key={mo} value={mo}>{formatMonth(mo)}</option>)}
+                </select>
+              </div>
+            </header>
+            <div className="bg-surface border border-rule rounded-md shadow-[0_1px_2px_rgba(18,40,59,0.04)] overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-text-muted text-xs uppercase tracking-wide">
                   <tr className="border-b border-ink">

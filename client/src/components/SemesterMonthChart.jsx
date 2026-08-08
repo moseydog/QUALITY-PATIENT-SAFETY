@@ -100,9 +100,9 @@ export default function SemesterMonthChart({ label, months, series, target, big 
     .filter(Boolean);
 
   return (
-    <div className={`bg-surface border border-rule rounded ${big ? 'p-4' : 'p-3'}`}>
+    <div className={`bg-surface border border-rule rounded-md shadow-[0_1px_2px_rgba(18,40,59,0.04)] ${big ? 'p-5' : 'p-4'}`}>
       <div className="flex items-baseline justify-between gap-2 mb-2">
-        <h4 className={big ? 'text-sm font-medium text-text-muted' : 'text-xs font-medium text-text-muted leading-tight'}>{label}</h4>
+        <h4 className={big ? 'text-sm font-semibold text-ink tracking-tight' : 'text-xs font-semibold text-ink leading-tight tracking-tight'}>{label}</h4>
         {delta !== null && (
           <span className={`text-xs font-semibold flex-shrink-0 ${delta >= 0 ? 'text-status-good' : 'text-status-bad'}`}>{delta >= 0 ? '+' : ''}{delta} pts this semester</span>
         )}
@@ -138,7 +138,7 @@ export default function SemesterMonthChart({ label, months, series, target, big 
         </ResponsiveContainer>
       </div>
       {visible.length > 0 && (
-        <ul className="mt-2 space-y-1 border-t border-rule pt-2">
+        <ul className="mt-3 space-y-1.5 border-t border-rule pt-3">
           {visible.map((a) => (
             <li key={a.id} className="text-[11px] text-text-muted flex gap-1.5">
               <span
